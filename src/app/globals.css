@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%; /* #0a0a0a */
+    --foreground: 120 100% 50%; /* #00ff00 Neon Green */
+
+    --muted: 0 0% 14%; /* Darker gray for muted elements */
+    --muted-foreground: 120 100% 35%; /* Dimmer Neon Green for muted text */
+
+    --popover: 0 0% 6%; /* Slightly lighter than background for popovers */
+    --popover-foreground: 120 100% 50%; /* Neon Green for popover text */
+
+    --card: 0 0% 6%; /* Slightly lighter than background for cards */
+    --card-foreground: 120 100% 50%; /* Neon Green for card text */
+
+    --border: 150 50% 20%; /* Dark Green/Cyanish border */
+    --input: 0 0% 10%; /* Background for input fields */
+
+    --primary: 180 100% 50%; /* #00ffff Cyan for primary actions/buttons */
+    --primary-foreground: 0 0% 0%; /* Black for text on primary elements for contrast */
+
+    --secondary: 0 0% 12%; /* Dark gray for secondary elements */
+    --secondary-foreground: 120 100% 45%; /* Slightly dimmer Neon Green for secondary text */
+
+    --accent: 180 100% 60%; /* Lighter Cyan for accents like hover/focus */
+    --accent-foreground: 0 0% 0%; /* Black for text on accent elements */
+
+    --destructive: 0 84.2% 60.2%; /* Default red, can be themed later */
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 180 100% 50%; /* Cyan for focus rings */
+
+    --radius: 0.5rem;
+
+    /* Chart colors (can be adjusted for hacker theme if charts are used) */
+    --chart-1: 120 100% 50%; /* Neon Green */
+    --chart-2: 180 100% 50%; /* Cyan */
+    --chart-3: 210 100% 50%; /* Blue */
+    --chart-4: 60 100% 50%;  /* Yellow */
+    --chart-5: 300 100% 50%; /* Magenta */
+
+    /* Sidebar specific theme variables (will be less used with new layout) */
+    --sidebar-background: 0 0% 6%; /* Dark background for sidebar */
+    --sidebar-foreground: 120 100% 50%; /* Neon Green text in sidebar */
+    --sidebar-primary: 180 100% 50%; /* Cyan for active/primary items in sidebar */
+    --sidebar-primary-foreground: 0 0% 0%; /* Black text on sidebar primary items */
+    --sidebar-accent: 0 0% 10%; /* Darker background for hover/accent in sidebar */
+    --sidebar-accent-foreground: 120 100% 60%; /* Brighter Neon Green for text on sidebar accent */
+    --sidebar-border: 120 50% 15%; /* Dark green border for sidebar */
+    --sidebar-ring: 180 100% 50%; /* Cyan for focus rings within sidebar */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-mono; /* Apply monospace font globally */
+  }
+}
+
+@keyframes blink-animation {
+  to {
+    visibility: hidden;
+  }
+}
+.blinking-cursor {
+  display: inline-block;
+  animation: blink-animation 1s steps(2, start) infinite;
+  font-weight: bold;
+}
