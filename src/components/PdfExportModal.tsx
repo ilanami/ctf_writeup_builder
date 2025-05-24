@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -46,7 +45,6 @@ const PDF_IMAGE_QUALITY_OPTIONS_KEYS = [
   { key: 'pdfModal.imageQualityHigh', value: 95 },
   { key: 'pdfModal.imageQualityMax', value: 100 },
 ] as const;
-
 
 interface PdfDocumentContentProps {
   writeUp: WriteUp;
@@ -121,8 +119,8 @@ const PDF_THEMES_CONFIG: Record<PdfTheme, { nameKey: string; backgroundColor: st
   }
 };
 
-
 const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, options, pdfStyles, currentLocale, tDifficulties, tOS, tPdfModal }) => {
+  const t = useScopedI18n();
   const sectionsToExport = writeUp.sections.filter(section => !section.isTemplate);
   const currentTheme = PDF_THEMES_CONFIG[options.theme] || PDF_THEMES_CONFIG.Hacker;
   const dateLocale = currentLocale === 'es' ? es : enUS;
@@ -134,587 +132,615 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
   };
   const fontSizes = getFontSizeValues(options.fontSize);
 
+  // Estilos para la vista previa - tamaño fijo más pequeño
+  const previewStyle: React.CSSProperties = {
+    width: '210mm', // Mantenemos A4 pero se escalará
+    minHeight: '297mm',
+    margin: '0',
+    background: currentTheme.backgroundColor,
+    color: currentTheme.textColor,
+    fontFamily: currentTheme.fontFamily,
+    fontSize: '11pt',
+    lineHeight: '1.5',
+    // Solo en vista previa: borde y sombra
+    border: '1px solid #ddd',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+    borderRadius: '4px',
+    position: 'relative',
+    overflow: 'visible',
+    // Padding como el PDF real
+    padding: '12mm 10mm 15mm 10mm',
+    boxSizing: 'border-box',
+  };
+
   return (
-    <div className="pdf-page-content-wrapper"> 
-      <style dangerouslySetInnerHTML={{ __html: pdfStyles }} />
-        <div className="pdf-section pdf-header-info">
-          <h1 className="pdf-main-title" style={{ fontSize: `${fontSizes.title}pt`, color: currentTheme.primaryColor }}>{writeUp.title || tPdfModal('untitledWriteup')}</h1>
-          <div className="pdf-general-info" style={{ fontSize: `${fontSizes.info}pt`}}>
-            {writeUp.author && <p><strong>{tPdfModal('authorLabel')}:</strong> {writeUp.author}</p>}
-            {writeUp.date && <p><strong>{tPdfModal('dateLabel')}:</strong> {format(parseISO(writeUp.date), "PPP", { locale: dateLocale })}</p>}
-            {writeUp.difficulty && <p><strong>{tPdfModal('difficultyLabel')}:</strong> {tDifficulties(writeUp.difficulty as any)}</p>}
-            {writeUp.os && <p><strong>{tPdfModal('osLabel')}:</strong> {tOS(writeUp.os as any)}</p>}
-            {writeUp.tags && writeUp.tags.length > 0 && <p><strong>{tPdfModal('tagsLabel')}:</strong> {writeUp.tags.join(', ')}</p>}
+    <>
+      <style dangerouslySetInnerHTML={{ __html: pdfStyles + `
+        /* Estilos específicos para la vista previa - escalada */
+        .pdf-content-container * {
+          box-sizing: border-box;
+        }
+      ` }} />
+      <div className="pdf-content-container" style={previewStyle}>
+        {/* Header con información general */}
+        <div className="pdf-header-section">
+          <h1 className="pdf-main-title" style={{ 
+            fontSize: `${fontSizes.title}pt`,
+            color: currentTheme.primaryColor,
+            textAlign: 'center',
+            marginBottom: '6pt',
+            marginTop: '0',
+            fontWeight: 'bold'
+          }}>
+            {writeUp.title || tPdfModal('untitledWriteup')}
+          </h1>
+          
+          <div className="pdf-general-info" style={{ 
+            fontSize: `${fontSizes.info}pt`,
+            marginBottom: '12pt',
+            textAlign: 'center'
+          }}>
+            {writeUp.author && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('authorLabel')}:</strong> {writeUp.author}</p>}
+            {writeUp.date && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('dateLabel')}:</strong> {format(parseISO(writeUp.date), "PPP", { locale: dateLocale })}</p>}
+            {writeUp.difficulty && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('difficultyLabel')}:</strong> {tDifficulties(writeUp.difficulty as any)}</p>}
+            {writeUp.os && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('osLabel')}:</strong> {tOS(writeUp.os as any)}</p>}
+            {writeUp.tags && writeUp.tags.length > 0 && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('tagsLabel')}:</strong> {writeUp.tags.join(', ')}</p>}
           </div>
         </div>
 
-        {writeUp.machineImage && (
-          <div className="pdf-section machine-image-section">
-            <h2 className="pdf-section-title" style={{ fontSize: `${fontSizes.sectionTitle}pt`, color: currentTheme.primaryColor }}>{tPdfModal('machineImageLabel')}</h2>
-            <img 
-                src={writeUp.machineImage.dataUrl} 
-                alt={writeUp.machineImage.name || tPdfModal('machineImageAlt')} 
-                className="pdf-machine-image"
-                data-ai-hint="server security"
-            />
-          </div>
-        )}
-         {sectionsToExport.length > 0 && <hr className="pdf-section-separator" />}
-
-
-        {sectionsToExport.map((section, index) => {
-          let sectionHtmlContent = '';
-          if (typeof section.content === 'string') {
-            try {
-              sectionHtmlContent = section.content ? marked.parse(section.content) : `<p><em>${tPdfModal('noContent')}</em></p>`;
-            } catch (e) {
-              console.error("Error parsing markdown for section:", section.title, e);
-              sectionHtmlContent = `<p><em>${tPdfModal('errorProcessingMarkdown')}</em></p>`;
+        {/* Contenido de las secciones */}
+        <div className="pdf-sections-content">
+          {sectionsToExport.map((section, index) => {
+            let sectionHtmlContent = '';
+            if (typeof section.content === 'string') {
+              try {
+                sectionHtmlContent = section.content ? marked.parse(section.content).toString() : `<p><em>${tPdfModal('noContent')}</em></p>`;
+              } catch (e) {
+                console.error("Error parsing markdown for section:", section.title, e);
+                sectionHtmlContent = `<p><em>${tPdfModal('errorProcessingMarkdown')}</em></p>`;
+              }
+            } else {
+              console.error(`Invalid content type for section "${section.title || tPdfModal('untitledSection')}":`, section.content);
+              sectionHtmlContent = `<p><em>${tPdfModal('errorInvalidContentType')}</em></p>`;
             }
-          } else {
-            console.error(`Invalid content type for section "${section.title || tPdfModal('untitledSection')}":`, section.content);
-            sectionHtmlContent = `<p><em>${tPdfModal('errorInvalidContentType')}</em></p>`;
-          }
-          const sectionTypeKey = `pdfModal.sectionType${section.type.charAt(0).toUpperCase() + section.type.slice(1)}` as any;
+            
+            const displayTitle = section.isTemplate && section.title?.startsWith('defaultSections.') 
+              ? t(section.title as any) 
+              : section.title;
 
-          return (
-            <React.Fragment key={section.id}>
-              <div className="pdf-section section-item">
-                <h2 className="pdf-section-title" style={{ fontSize: `${fontSizes.sectionTitle}pt`, color: currentTheme.primaryColor }}>
-                  {index + 1}. {section.title || tPdfModal('untitledSection')} 
-                  <span className="pdf-section-type" style={{ color: currentTheme.accentColor }}>({tPdfModal(sectionTypeKey)})</span>
-                </h2>
-                {section.type === 'pregunta' && section.answer && (
-                  <p className="pdf-answer"><strong>{tPdfModal('answerLabel')}:</strong> {section.answer}</p>
+            return (
+              <React.Fragment key={section.id}>
+                <div className="pdf-section" style={{ marginBottom: '10pt' }}>
+                  <h2 className="pdf-section-title" style={{ 
+                    fontSize: `${fontSizes.sectionTitle}pt`,
+                    color: currentTheme.primaryColor,
+                    borderBottom: `1px solid ${currentTheme.borderColor}`,
+                    paddingBottom: '2pt',
+                    marginTop: '8pt',
+                    marginBottom: '4pt',
+                    fontWeight: 'bold'
+                  }}>
+                    {index + 1}. {displayTitle || tPdfModal('untitledSection')}
+                  </h2>
+                  
+                  {section.type === 'pregunta' && section.answer && (
+                    <p className="pdf-answer" style={{ marginBottom: '4pt' }}>
+                      <strong>{tPdfModal('answerLabel')}:</strong> {section.answer}
+                    </p>
+                  )}
+                  
+                  {section.type === 'flag' && section.flagValue && (
+                    <p className="pdf-flag-value" style={{ marginBottom: '4pt' }}>
+                      <strong>{tPdfModal('flagLabel')}:</strong> 
+                      <code style={{ 
+                        backgroundColor: currentTheme.codeBg, 
+                        color: currentTheme.codeColor,
+                        padding: '1pt 4pt',
+                        borderRadius: '2px',
+                        marginLeft: '3pt',
+                        fontFamily: currentTheme.fontFamily
+                      }}>
+                        {section.flagValue}
+                      </code>
+                    </p>
+                  )}
+                  
+                  <div className="section-content" dangerouslySetInnerHTML={{ __html: sectionHtmlContent }} />
+                  
+                  {section.screenshots && section.screenshots.length > 0 && (
+                    <div className="pdf-screenshots-container" style={{ marginTop: '6pt' }}>
+                      <h4 className="pdf-screenshots-title" style={{ 
+                        fontSize: `${Math.max(6, fontSizes.base - 1)}pt`,
+                        marginBottom: '4pt',
+                        fontWeight: 'bold',
+                        color: currentTheme.primaryColor
+                      }}>
+                        {tPdfModal('screenshotsLabel')}:
+                      </h4>
+                      {section.screenshots.map((ss: AppScreenshot) => (
+                        <img 
+                          key={ss.id} 
+                          src={ss.dataUrl} 
+                          alt={ss.name} 
+                          className="pdf-screenshot-image"
+                          style={{
+                            maxWidth: '100%',
+                            height: 'auto',
+                            border: `1px solid ${currentTheme.borderColor}`,
+                            borderRadius: '3px',
+                            marginTop: '2pt',
+                            marginBottom: '2pt',
+                            display: 'block'
+                          }}
+                          data-ai-hint="terminal screenshot"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {index < sectionsToExport.length - 1 && (
+                  <hr className="pdf-section-separator" style={{
+                    border: '0',
+                    height: '1px',
+                    backgroundColor: currentTheme.borderColor,
+                    margin: '8pt 0'
+                  }} />
                 )}
-                {section.type === 'flag' && section.flagValue && (
-                  <p className="pdf-flag-value"><strong>{tPdfModal('flagLabel')}:</strong> <code style={{ backgroundColor: currentTheme.codeBg, color: currentTheme.codeColor }}>{section.flagValue}</code></p>
-                )}
-                <div dangerouslySetInnerHTML={{ __html: sectionHtmlContent }} />
-
-                {section.screenshots && section.screenshots.length > 0 && (
-                  <div className="pdf-screenshots-container">
-                    <h4 className="pdf-screenshots-title" style={{ fontSize: `${Math.max(6, fontSizes.base -1)}pt` }}>{tPdfModal('screenshotsLabel')}:</h4>
-                    {section.screenshots.map((ss: AppScreenshot) => (
-                      <img key={ss.id} src={ss.dataUrl} alt={ss.name} className="pdf-screenshot-image" data-ai-hint="terminal screenshot"/>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {index < sectionsToExport.length - 1 && <hr className="pdf-section-separator" />}
-            </React.Fragment>
-          );
-        })}
-    </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 };
 
+const SIMPLE_PDF_THEMES_CONFIG = {
+  Light: PDF_THEMES_CONFIG['Professional-Light'],
+  Dark: PDF_THEMES_CONFIG['Hacker'],
+};
 
 export const PdfExportModal: React.FC = () => {
   const { state } = useWriteUp();
   const { writeUp } = state;
   const [isOpen, setIsOpen] = useState(false);
-  const [options, setOptions] = useState<PdfExportOptions>(DEFAULT_PDF_EXPORT_OPTIONS);
+  const [theme, setTheme] = useState<'Light' | 'Dark'>('Dark');
   const { toast } = useToast();
   const exportContentRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  
+
   const currentLocale = useCurrentLocale();
   const tPdfModal = useScopedI18n('pdfModal');
   const tDifficulties = useScopedI18n('difficulties');
   const tOS = useScopedI18n('operatingSystems');
 
-
-  useEffect(() => {
-    if (isOpen) {
-      setOptions(prev => ({
-        ...prev,
-        headerText: `${writeUp.title || tPdfModal('untitledWriteup')} - ${writeUp.author || tPdfModal('anonymousAuthor')}`,
-        footerText: tPdfModal('defaultPageFooter', {p: '%p', P: '%P'}),
-      }));
-    }
-  }, [isOpen, writeUp.title, writeUp.author, tPdfModal]);
-
-  const handleOptionChange = (field: keyof PdfExportOptions, value: any) => {
-    setOptions(prev => ({ ...prev, [field]: value }));
-  };
-  
-  const currentThemeConfig = PDF_THEMES_CONFIG[options.theme] || PDF_THEMES_CONFIG.Hacker;
+  const currentThemeConfig = SIMPLE_PDF_THEMES_CONFIG[theme];
 
   const generatePdfStyles = (): string => {
-    const pageMarginsCSS = `15mm`; 
-    const fontOptionValue = options.fontSize;
-    const themeFontSizes = {
-        base: fontOptionValue,
-        title: fontOptionValue + (fontOptionValue <= 8 ? 10 : fontOptionValue <= 10 ? 12 : 14), 
-        sectionTitle: fontOptionValue + (fontOptionValue <= 8 ? 6 : fontOptionValue <= 10 ? 6 : 6), 
-        info: Math.max(6, fontOptionValue -1),
-    };
-
     return `
+      /* Configuración de página - márgenes más compactos */
       @page {
-        margin: 0; 
+        size: A4 portrait;
+        margin: 12mm 10mm 15mm 10mm; /* Reducidos de 18mm 15mm 20mm 15mm */
+        background-color: ${currentThemeConfig.backgroundColor};
+        
+        /* Pie de página con numeración */
+        @bottom-center {
+          content: "Página " counter(page) " de " counter(pages);
+          font-size: 9pt;
+          color: ${currentThemeConfig.textColor};
+        }
       }
+
+      /* Reset y configuración base */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
       html, body {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        height: 100%; 
-        background-color: ${currentThemeConfig.backgroundColor} !important; 
-        margin: 0; 
-        padding: 0; 
-        box-sizing: border-box;
+        color-adjust: exact !important;
+        background-color: ${currentThemeConfig.backgroundColor} !important;
+        color: ${currentThemeConfig.textColor} !important;
+        font-family: ${currentThemeConfig.fontFamily};
+        font-size: 11pt;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
       }
-      .pdf-page-content-wrapper { 
-         background-color: ${currentThemeConfig.backgroundColor} !important; 
-         min-height: 100%;
-         padding: ${pageMarginsCSS};
-         font-family: "${currentThemeConfig.fontFamily}", monospace, sans-serif;
-         font-size: ${themeFontSizes.base}pt;
-         line-height: 1.35; 
-         color: ${currentThemeConfig.textColor} !important;
+
+      /* Contenedor principal */
+      .pdf-content-container {
+        background-color: ${currentThemeConfig.backgroundColor} !important;
+        color: ${currentThemeConfig.textColor} !important;
+        width: 100%;
+        min-height: 100%;
+        font-family: ${currentThemeConfig.fontFamily};
+        font-size: 11pt;
+        line-height: 1.5;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
       }
-      .pdf-section { margin-bottom: 0.3em; page-break-inside: avoid; } 
-      .pdf-header-info { margin-bottom: 0.5em; text-align: center;} 
-      .pdf-general-info p { margin-bottom: 0.1em; font-size: ${themeFontSizes.info}pt; } 
-      .pdf-main-title {
-        font-size: ${themeFontSizes.title}pt;
-        font-weight: bold;
-        color: ${currentThemeConfig.primaryColor};
-        margin-bottom: 0.1em; 
-        text-align: center;
+
+      /* Secciones principales - más compactas */
+      .pdf-header-section {
+        margin-bottom: 12pt;
       }
-      .pdf-section-title {
-        font-size: ${themeFontSizes.sectionTitle}pt;
-        font-weight: bold;
-        color: ${currentThemeConfig.primaryColor};
-        margin-top: 0.2em; 
-        margin-bottom: 0.1em; 
-        border-bottom: 1px solid ${currentThemeConfig.borderColor};
-        padding-bottom: 0.05em; 
-      }
-      .pdf-section-type { font-size: ${Math.max(6, themeFontSizes.base * 0.8)}pt; color: ${currentThemeConfig.accentColor}; font-weight: normal; margin-left: 5px; }
-      .pdf-answer, .pdf-flag-value { margin-top: 0.2em; margin-bottom: 0.2em; } 
-      .pdf-flag-value code {
-        font-weight: bold;
-        background-color: ${currentThemeConfig.codeBg};
-        color: ${currentThemeConfig.codeColor};
-        padding: 0.1em 0.3em;
-        border-radius: 3px;
-        border: 1px solid ${currentThemeConfig.borderColor};
-      }
-      h1, h2, h3, h4, h5, h6 { color: ${currentThemeConfig.primaryColor}; page-break-after: avoid; }
-      p, div, li { margin-bottom: 0.15em; } 
-      ul, ol { margin-left: 15px; padding-left: 0; } 
-      a { color: ${currentThemeConfig.accentColor}; text-decoration: underline; }
-      code:not(pre > code) { 
-        background-color: ${currentThemeConfig.codeBg};
-        color: ${currentThemeConfig.codeColor};
-        padding: 0.1em 0.3em;
-        border-radius: 3px;
-        font-family: "${currentThemeConfig.fontFamily}", monospace;
-        font-size: ${Math.max(6, themeFontSizes.base * 0.9)}pt;
-      }
-      pre {
-        background-color: ${currentThemeConfig.preBg};
-        padding: 0.4em; 
-        border-radius: 5px;
-        overflow-x: auto;
-        border: 1px solid ${currentThemeConfig.borderColor};
+
+      .pdf-section {
+        margin-bottom: 10pt;
         page-break-inside: avoid;
-        margin-top: 0.2em; 
-        margin-bottom: 0.2em; 
+        orphans: 2;
+        widows: 2;
       }
-      pre code { 
-        background-color: transparent; 
-        color: ${currentThemeConfig.codeColor}; 
-        padding: 0; 
-        font-family: "${currentThemeConfig.fontFamily}", monospace;
-        font-size: ${Math.max(6, themeFontSizes.base * 0.85)}pt; 
-        border-radius:0; 
+
+      /* Títulos - espaciado optimizado */
+      .pdf-main-title {
+        font-size: 20pt;
+        font-weight: bold;
+        color: ${currentThemeConfig.primaryColor} !important;
+        text-align: center;
+        margin: 0 0 6pt 0;
+        page-break-after: avoid;
+      }
+
+      .pdf-section-title {
+        font-size: 14pt;
+        font-weight: bold;
+        color: ${currentThemeConfig.primaryColor} !important;
+        border-bottom: 1px solid ${currentThemeConfig.borderColor};
+        padding-bottom: 2pt;
+        margin: 8pt 0 4pt 0;
+        page-break-after: avoid;
+      }
+
+      /* Información general - más compacta */
+      .pdf-general-info {
+        font-size: 8pt;
+        text-align: center;
+        margin-bottom: 12pt;
+      }
+
+      .pdf-general-info p {
+        margin: 1pt 0;
+      }
+
+      /* Párrafos y texto - espaciado reducido */
+      p {
+        margin-bottom: 4pt;
+        orphans: 2;
+        widows: 2;
+      }
+
+      /* Listas - espaciado compacto */
+      ul, ol {
+        margin: 4pt 0 4pt 16pt;
+        padding: 0;
+      }
+
+      li {
+        margin-bottom: 2pt;
+      }
+
+      /* Enlaces */
+      a {
+        color: ${currentThemeConfig.accentColor} !important;
+        text-decoration: underline;
+      }
+
+      /* Código inline - más compacto */
+      code:not(pre code) {
+        background-color: ${currentThemeConfig.codeBg} !important;
+        color: ${currentThemeConfig.codeColor} !important;
+        padding: 1pt 4pt;
+        border-radius: 2px;
+        font-family: ${currentThemeConfig.fontFamily};
+        font-size: 9pt;
+        border: 1px solid ${currentThemeConfig.borderColor};
+      }
+
+      /* Bloques de código - espaciado optimizado */
+      pre {
+        background-color: ${currentThemeConfig.preBg} !important;
+        border: 1px solid ${currentThemeConfig.borderColor};
+        border-radius: 4px;
+        padding: 6pt;
+        margin: 4pt 0;
+        overflow-x: auto;
+        page-break-inside: avoid;
+        font-family: ${currentThemeConfig.fontFamily};
+      }
+
+      pre code {
+        background-color: transparent !important;
+        color: ${currentThemeConfig.codeColor} !important;
+        padding: 0;
         border: none;
+        border-radius: 0;
+        font-family: ${currentThemeConfig.fontFamily};
+        font-size: 9pt;
       }
-      img.pdf-machine-image { display: block; max-width: 70%; margin: 0.5em auto; border: 1px solid ${currentThemeConfig.borderColor}; border-radius: 4px; max-height: 250px; object-fit: contain; page-break-inside: avoid; } 
-      .pdf-screenshots-container { margin-top: 0.3em; } 
-      .pdf-screenshots-title { font-size: ${Math.max(6, themeFontSizes.base -1)}pt; font-weight: bold; margin-bottom: 0.2em; } 
-      img.pdf-screenshot-image { max-width: 100%; height: auto; border: 1px solid ${currentThemeConfig.borderColor}; margin-top: 0.2em; margin-bottom: 0.2em; border-radius: 4px; max-height: 200px; object-fit: contain; page-break-inside: avoid; } 
-      blockquote { border-left: 3px solid ${currentThemeConfig.borderColor}; margin-left: 0; padding-left: 0.5em; color: ${currentThemeConfig.accentColor}; font-style: italic; margin-bottom: 0.2em; } 
+
+      /* Imágenes - tamaño optimizado */
+      img.pdf-screenshot-image {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid ${currentThemeConfig.borderColor};
+        border-radius: 3px;
+        margin: 2pt 0;
+        page-break-inside: avoid;
+        display: block;
+        max-height: 180px; /* Limitamos altura para aprovechar mejor el espacio */
+        object-fit: contain;
+      }
+
+      /* Citas - más compactas */
+      blockquote {
+        border-left: 2px solid ${currentThemeConfig.borderColor};
+        margin: 4pt 0;
+        padding-left: 8pt;
+        color: ${currentThemeConfig.accentColor} !important;
+        font-style: italic;
+      }
+
+      /* Separadores - más finos */
       hr.pdf-section-separator {
         border: 0;
         height: 1px;
         background-color: ${currentThemeConfig.borderColor};
-        margin: 0.8em 0;
+        margin: 8pt 0;
+      }
+
+      /* Encabezados - tamaños ajustados */
+      h1, h2, h3, h4, h5, h6 {
+        color: ${currentThemeConfig.primaryColor} !important;
+        page-break-after: avoid;
+        orphans: 2;
+        widows: 2;
+        margin-top: 8pt;
+        margin-bottom: 4pt;
+      }
+
+      h1 { font-size: 16pt; }
+      h2 { font-size: 14pt; }
+      h3 { font-size: 12pt; }
+      h4 { font-size: 11pt; }
+      h5 { font-size: 10pt; }
+      h6 { font-size: 9pt; }
+
+      /* Flags y respuestas - más compactas */
+      .pdf-answer, .pdf-flag-value {
+        margin: 4pt 0;
+      }
+
+      .pdf-flag-value code {
+        font-weight: bold;
+      }
+
+      /* Screenshots - espaciado reducido */
+      .pdf-screenshots-container {
+        margin-top: 6pt;
+      }
+
+      .pdf-screenshots-title {
+        font-size: 9pt;
+        font-weight: bold;
+        margin-bottom: 4pt;
+      }
+
+      /* Específico para media print */
+      @media print {
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        .pdf-content-container {
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          width: 100% !important;
+        }
+
+        /* Asegurar que los colores se impriman */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
       }
     `;
   };
 
   const handleExport = async () => {
     if (!exportContentRef.current) {
-      toast({ title: tPdfModal('errorPreparingPDF'), description: tPdfModal('couldNotFindContentToExport'), variant: "destructive" });
+      toast({ 
+        title: tPdfModal('errorPreparingPDF'), 
+        description: tPdfModal('couldNotFindContentToExport'), 
+        variant: "destructive" 
+      });
       return;
     }
+
     setIsExporting(true);
-    toast({ title: tPdfModal('processingPDF'), description: tPdfModal('generatingPDF') });
-    
-    let elementToExport: HTMLElement | null = null;
-    let temporaryClone: HTMLElement | null = null;
-
-    if (exportContentRef.current) {
-        temporaryClone = exportContentRef.current.cloneNode(true) as HTMLElement;
-        temporaryClone.style.position = 'absolute';
-        temporaryClone.style.left = '-9999px';
-        temporaryClone.style.top = '-9999px';
-        document.body.appendChild(temporaryClone);
-        elementToExport = temporaryClone;
-    } else {
-         toast({ title: tPdfModal('exportError'), description: tPdfModal('contentToExportIsEmpty'), variant: "destructive" });
-         setIsExporting(false);
-         return;
-    }
-    
-    if (!elementToExport || elementToExport.innerHTML.trim() === "") {
-        console.error("PDF Export: Element to process is empty or contains only whitespace.");
-        toast({ title: tPdfModal('exportError'), description: tPdfModal('contentToExportIsEmpty'), variant: "destructive" });
-        setIsExporting(false);
-        if (temporaryClone && temporaryClone.parentNode) {
-            temporaryClone.parentNode.removeChild(temporaryClone);
-        }
-        return;
-    }
-    
-    const jsPdfOrientation = options.orientation === 'Vertical' ? 'portrait' : 'landscape';
-    console.log("PDF Export: jsPDF orientation:", jsPdfOrientation, "Theme BG:", currentThemeConfig.backgroundColor, "HTML2CANVAS BG:", currentThemeConfig.backgroundColor);
-
+    toast({ 
+      title: tPdfModal('processingPDF'), 
+      description: tPdfModal('generatingPDF') 
+    });
 
     try {
-      const html2pdfModule = await import('html2pdf.js');
-      const html2pdf = html2pdfModule.default || html2pdfModule; 
+      // Crear iframe para la impresión
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.left = '-9999px';
+      printFrame.style.top = '-9999px';
+      printFrame.style.width = '210mm';
+      printFrame.style.height = '297mm';
+      document.body.appendChild(printFrame);
 
-      if (typeof html2pdf !== 'function') {
-        console.error("html2pdf is not a function. Imported module:", html2pdfModule);
-        toast({ title: tPdfModal('exportError'), description: tPdfModal('couldNotLoadPDFLibrary'), variant: "destructive" });
+      // Esperar a que el iframe se cargue
+      await new Promise<void>((resolve) => {
+        printFrame.onload = () => resolve();
+        printFrame.src = 'about:blank';
+      });
+
+      const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
+      if (!frameDoc) throw new Error('Could not access iframe document');
+
+      // Obtener el contenido HTML del componente
+      const contentElement = exportContentRef.current.querySelector('.pdf-content-container');
+      if (!contentElement) throw new Error('Content element not found');
+
+      // Crear el HTML completo para imprimir
+      const htmlToPrint = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${writeUp.title || 'WriteUp Export'}</title>
+          <style>
+            ${generatePdfStyles()}
+          </style>
+        </head>
+        <body>
+          ${contentElement.outerHTML}
+        </body>
+        </html>
+      `;
+
+      // Escribir el contenido en el iframe
+      frameDoc.open();
+      frameDoc.write(htmlToPrint);
+      frameDoc.close();
+
+      // Esperar un momento para que se renderice completamente
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Imprimir
+      printFrame.contentWindow?.print();
+
+      // Limpiar después de un delay
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
         setIsExporting(false);
-        if (temporaryClone && temporaryClone.parentNode) {
-            temporaryClone.parentNode.removeChild(temporaryClone);
-        }
-        return;
-      }
-      
-      const pdfWorkerOptions = {
-        margin:       0, 
-        filename:     `${(writeUp.title || 'writeup').replace(/\s+/g, '_')}.pdf`,
-        image:        { type: 'jpeg', quality: options.imageQuality / 100 },
-        html2canvas:  { 
-          scale: 2, 
-          useCORS: true, 
-          logging: true, 
-          letterRendering: true, 
-          backgroundColor: currentThemeConfig.backgroundColor 
-        },
-        jsPDF:        { 
-          unit: 'mm', 
-          format: options.pageSize.toLowerCase() as 'a4' | 'letter', 
-          orientation: jsPdfOrientation, 
-          compress: true,
-        },
-        pagebreak:    { mode: ['css', 'avoid-all'] } 
-      };
-      console.log("PDF Export: html2pdf worker options:", pdfWorkerOptions);
-      
-      const worker = html2pdf().from(elementToExport).set(pdfWorkerOptions);
-      
-      if (options.includeHeader || options.includeFooter || options.pageNumbers) {
-        await worker.toPdf().get('pdf').then(function (pdf: any) {
-          const totalPages = pdf.internal.getNumberOfPages();
-          const headerFooterFontSize = Math.max(7, options.fontSize - 2);
-          
-          const textMarginFromEdge = 10; 
-          const headerY = textMarginFromEdge; 
-          const footerY = pdf.internal.pageSize.getHeight() - textMarginFromEdge; 
-          
-          const themeColors = currentThemeConfig;
-
-          for (let i = 1; i <= totalPages; i++) {
-            pdf.setPage(i);
-            const hexToRgb = (hex: string) => {
-                const r = parseInt(hex.slice(1, 3), 16);
-                const g = parseInt(hex.slice(3, 5), 16);
-                const b = parseInt(hex.slice(5, 7), 16);
-                return [r, g, b];
-            };
-            try {
-                const [r, g, b] = hexToRgb(themeColors.textColor);
-                pdf.setTextColor(r, g, b);
-            } catch (e) {
-                console.error("Error setting text color for PDF header/footer:", e);
-                pdf.setTextColor(0,0,0); 
-            }
-            
-            let pdfFontFamily = 'helvetica'; 
-            const selectedFontFamily = PDF_THEMES_CONFIG[options.theme]?.fontFamily || 'Fira Code';
-            if (selectedFontFamily.toLowerCase().includes('fira') || selectedFontFamily.toLowerCase().includes('consolas') || selectedFontFamily.toLowerCase().includes('courier')) {
-                pdfFontFamily = 'courier';
-            } else if (selectedFontFamily.toLowerCase().includes('times')) {
-                pdfFontFamily = 'times';
-            }
-            pdf.setFont(pdfFontFamily, 'normal');
-
-            if (options.includeHeader && options.headerText) {
-              pdf.setFontSize(headerFooterFontSize);
-              pdf.text(options.headerText, pdf.internal.pageSize.getWidth() / 2, headerY, { align: 'center' });
-            }
-            if ((options.includeFooter && options.footerText) || options.pageNumbers) {
-               let footerTxt = '';
-               const defaultFooter = tPdfModal('defaultPageFooter', { p: String(i), P: String(totalPages) });
-               if (options.pageNumbers) {
-                  footerTxt = (options.footerText || defaultFooter).replace('%p', String(i)).replace('%P', String(totalPages));
-               } else if (options.includeFooter && options.footerText) {
-                  footerTxt = options.footerText;
-               }
-               pdf.setFontSize(headerFooterFontSize);
-               pdf.text(footerTxt, pdf.internal.pageSize.getWidth() / 2, footerY, { align: 'center' });
-            }
-          }
-        }).save(); 
-      } else {
-        await worker.save(); 
-      }
-      toast({ title: tPdfModal('pdfExportSuccess'), description: tPdfModal('pdfExportedSuccessfully') });
+        toast({ 
+          title: tPdfModal('pdfExportSuccess'), 
+          description: tPdfModal('pdfExportedSuccessfully') 
+        });
+      }, 1000);
 
     } catch (error: any) {
-      console.error("PDF Export: Error during export process:", error);
+      console.error('PDF Export Error:', error);
       toast({ 
         title: tPdfModal('exportError'), 
-        description: tPdfModal('pdfExportFailed', { errorMessage: error.message || String(error) || tPdfModal('unknownError')}), 
-        variant: "destructive",
-        duration: 9000,
+        description: tPdfModal('pdfExportFailed'), 
+        variant: "destructive", 
+        duration: 9000 
       });
-    } finally {
       setIsExporting(false);
-      if (temporaryClone && temporaryClone.parentNode) {
-        temporaryClone.parentNode.removeChild(temporaryClone);
-      }
     }
-  };
-  
-  const currentPdfStyles = generatePdfStyles();
-  const previewContainerBg = PDF_THEMES_CONFIG[options.theme]?.backgroundColor || '#0a0a0a'; 
-  
-  const OptionGroup: React.FC<{ title: string; icon?: React.ElementType; children: React.ReactNode }> = ({ title, icon: Icon, children }) => (
-    <div className="mb-6">
-      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center">
-        {Icon && <Icon size={16} className="mr-2" />}
-        {title}
-      </h3>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-
-  const ThemeButton: React.FC<{themeKey: PdfTheme}> = ({themeKey}) => {
-    const themeConfig = PDF_THEMES_CONFIG[themeKey];
-    const themeDisplayName = tPdfModal(themeConfig.nameKey as any) || themeKey; 
-    return (
-       <Button
-            variant={options.theme === themeKey ? 'default' : 'outline'}
-            onClick={() => handleOptionChange('theme', themeKey)}
-            className="h-20 w-full flex flex-col items-center justify-center text-xs p-2 transition-all duration-150"
-            style={{ 
-              backgroundColor: options.theme === themeKey ? currentThemeConfig.primaryColor : themeConfig.backgroundColor,
-              color: options.theme === themeKey ? (['#00ff00', '#ff00ff', '#00ffff', '#5cadff'].includes(currentThemeConfig.primaryColor) ? '#000' : currentThemeConfig.textColor) : themeConfig.textColor,
-              borderColor: options.theme === themeKey ? themeConfig.primaryColor : themeConfig.borderColor,
-              borderWidth: '2px'
-            }}
-            title={themeDisplayName}
-        >
-            <span className="font-bold mb-1">{themeDisplayName}</span>
-            <div className="w-8 h-3 rounded-full mt-1" style={{ background: themeConfig.primaryColor, opacity: 0.7 }} />
-        </Button>
-    );
   };
 
   const pdfPreviewContent = (
     <I18nProviderClient locale={currentLocale}>
-       <PdfDocumentContent 
-            writeUp={writeUp} 
-            options={options} 
-            pdfStyles={currentPdfStyles} 
-            currentLocale={currentLocale}
-            tDifficulties={tDifficulties}
-            tOS={tOS}
-            tPdfModal={tPdfModal}
-        />
+      <PdfDocumentContent 
+        writeUp={writeUp} 
+        options={{ 
+          ...DEFAULT_PDF_EXPORT_OPTIONS, 
+          theme: theme === 'Dark' ? 'Hacker' : 'Professional-Light', 
+          pageSize: 'A4', 
+          orientation: 'Vertical' 
+        }}
+        pdfStyles={generatePdfStyles()} 
+        currentLocale={currentLocale}
+        tDifficulties={tDifficulties}
+        tOS={tOS}
+        tPdfModal={tPdfModal}
+      />
     </I18nProviderClient>
   );
 
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if(!open) setShowPreview(true); }}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm"><FileSpreadsheet className="mr-1 h-4 w-4" /> {tPdfModal('exportButton')}</Button>
+        <Button variant="outline" size="sm">
+          <FileSpreadsheet className="mr-1 h-4 w-4" /> 
+          Exportar PDF
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-none w-[95vw] h-[90vh] p-0 m-0 flex flex-col bg-background text-foreground border-foreground/30">
+      
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 m-0 flex flex-col bg-background text-foreground border-foreground/30">
         <DialogHeader className="px-4 py-3 border-b border-border flex flex-row justify-between items-center">
           <DialogTitle className="text-lg font-bold text-foreground flex items-center">
             <FileSpreadsheet size={20} className="mr-2" />
-            {tPdfModal('title')}
+            Exportar PDF
           </DialogTitle>
           <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7"> <X size={18} /> </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7"> 
+              <X size={18} /> 
+            </Button>
           </DialogClose>
         </DialogHeader>
         
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-[380px] min-w-[350px] p-4 border-r border-border overflow-y-auto space-y-1 bg-card text-card-foreground">
-            <OptionGroup title={tPdfModal('theme')} icon={Palette}>
-                <div className="grid grid-cols-2 gap-2">
-                    {(Object.keys(PDF_THEMES_CONFIG) as PdfTheme[]).map(themeKey => (
-                        <ThemeButton key={themeKey} themeKey={themeKey} />
-                    ))}
-                </div>
-            </OptionGroup>
-
-            <OptionGroup title={tPdfModal('settings')} icon={Settings}>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="pdf-includeHeader" className="cursor-pointer text-sm">{tPdfModal('includeHeader')}</Label>
-                    <Switch id="pdf-includeHeader" checked={options.includeHeader} onCheckedChange={v => handleOptionChange('includeHeader', v)} />
-                </div>
-                {options.includeHeader && <div className="pl-2"><Label htmlFor="pdf-headerText" className="text-xs">{tPdfModal('headerText')}</Label><Input id="pdf-headerText" value={options.headerText} onChange={e => handleOptionChange('headerText', e.target.value)} className="h-8 text-xs"/></div>}
-                
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="pdf-includeFooter" className="cursor-pointer text-sm">{tPdfModal('includeFooter')}</Label>
-                    <Switch id="pdf-includeFooter" checked={options.includeFooter} onCheckedChange={v => handleOptionChange('includeFooter', v)} />
-                </div>
-                 {options.includeFooter && <div className="pl-2"><Label htmlFor="pdf-footerText" className="text-xs">{tPdfModal('footerText')}</Label><Input id="pdf-footerText" value={options.footerText} onChange={e => handleOptionChange('footerText', e.target.value)} placeholder={tPdfModal('defaultPageFooter', {p: '%p', P: '%P'})} className="h-8 text-xs"/></div>}
-
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="pdf-pageNumbers" className="cursor-pointer text-sm">{tPdfModal('pageNumbering')}</Label>
-                    <Switch id="pdf-pageNumbers" checked={options.pageNumbers} onCheckedChange={v => handleOptionChange('pageNumbers', v)} />
-                </div>
-                 <div className="flex items-center justify-between">
-                    <Label htmlFor="pdf-autoSplitSections" className="cursor-pointer text-sm">{tPdfModal('autoSplitSections')}</Label>
-                    <Switch id="pdf-autoSplitSections" checked={options.autoSplitSections} onCheckedChange={v => handleOptionChange('autoSplitSections', v)} disabled title={tPdfModal('futureFeatureTooltip')}/>
-                </div>
-            </OptionGroup>
-
-            <OptionGroup title={tPdfModal('pageLayout')} icon={LayoutList}>
-                <div>
-                    <Label htmlFor="pdf-pageSize" className="text-sm">{tPdfModal('pageSize')}</Label>
-                    <Select value={options.pageSize} onValueChange={(v: PageSize) => handleOptionChange('pageSize', v)}>
-                        <SelectTrigger id="pdf-pageSize" className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>{PDF_PAGE_SIZES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                 <div>
-                    <Label htmlFor="pdf-orientation" className="text-sm">{tPdfModal('orientation')}</Label>
-                    <Select value={options.orientation} onValueChange={(v: PageOrientation) => handleOptionChange('orientation', v)}>
-                        <SelectTrigger id="pdf-orientation" className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {PDF_PAGE_ORIENTATIONS_KEYS.map(oKey => (
-                                <SelectItem key={oKey} value={oKey}>
-                                    {tPdfModal(`orientation${oKey}` as any)}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </OptionGroup>
-            
-            <OptionGroup title={tPdfModal('typographyAndMedia')} icon={Baseline}>
-                <div>
-                  <Label htmlFor="pdf-fontSize" className="text-sm">{tPdfModal('fontSize')}</Label>
-                  <Select value={String(options.fontSize)} onValueChange={(v: string) => handleOptionChange('fontSize', parseInt(v))}>
-                    <SelectTrigger id="pdf-fontSize" className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        {PDF_FONT_SIZE_OPTIONS_KEYS.map(f => 
-                            <SelectItem key={f.value} value={String(f.value)}>
-                                {tPdfModal(f.key as any)} ({f.value}pt)
-                            </SelectItem>
-                        )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="pdf-imageQuality" className="text-sm">{tPdfModal('imageQuality')}</Label>
-                   <Select value={String(options.imageQuality)} onValueChange={(v: string) => handleOptionChange('imageQuality', parseInt(v))}>
-                    <SelectTrigger id="pdf-imageQuality" className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        {PDF_IMAGE_QUALITY_OPTIONS_KEYS.map(q => 
-                            <SelectItem key={q.value} value={String(q.value)}>
-                                {tPdfModal(q.key as any)} ({q.value}%)
-                            </SelectItem>
-                        )}
-                    </SelectContent>
-                  </Select>
-                </div>
-            </OptionGroup>
-
-            <div className="bg-muted/50 p-3 rounded-md mt-4">
-                <h4 className="text-xs font-semibold text-muted-foreground mb-1 flex items-center"><Pilcrow size={14} className="mr-1.5"/>{tPdfModal('pdfTipsTitle')}</h4>
-                <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
-                    <li>{tPdfModal('pdfTip1')}</li>
-                    <li>{tPdfModal('pdfTip2')}</li>
-                    <li>{tPdfModal('pdfTip3')}</li>
-                </ul>
-            </div>
-
-            {showPreview && (
-                <OptionGroup title={tPdfModal('previewZoom')} icon={ZoomIn}>
-                    <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => setZoomLevel(prev => Math.max(0.25, prev - 0.1))} className="h-8 w-8"><ZoomOut size={16}/></Button>
-                        <Input type="range" min="0.25" max="2" step="0.05" value={zoomLevel} onChange={e => setZoomLevel(parseFloat(e.target.value))} className="h-8"/>
-                        <Button variant="outline" size="icon" onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))} className="h-8 w-8"><ZoomIn size={16}/></Button>
-                        <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-                    </div>
-                </OptionGroup>
-            )}
-            
-            <div className="mt-6 space-y-2">
-                <Button onClick={handleExport} disabled={isExporting} className="w-full font-bold h-10"> 
-                    <Download className="mr-2 h-4 w-4" /> {isExporting ? tPdfModal('exportingButton') : tPdfModal('exportButton')}
+          <aside className="w-[160px] min-w-[160px] p-2 border-r border-border overflow-y-auto bg-card text-card-foreground flex flex-col">
+            <div className="mb-3 w-full">
+              <h3 className="text-xs font-semibold text-foreground mb-2">
+                Tema
+              </h3>
+              <div className="flex flex-col gap-1 w-full">
+                <Button 
+                  variant={theme === 'Dark' ? 'default' : 'outline'} 
+                  className="w-full text-xs h-7" 
+                  onClick={() => setTheme('Dark')}
+                >
+                  Oscuro
                 </Button>
-                <Button variant="outline" onClick={() => setShowPreview(!showPreview)} className="w-full h-9">
-                    {showPreview ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                    {showPreview ? tPdfModal('hidePreview') : tPdfModal('showPreview')}
+                <Button 
+                  variant={theme === 'Light' ? 'default' : 'outline'} 
+                  className="w-full text-xs h-7" 
+                  onClick={() => setTheme('Light')}
+                >
+                  Claro
                 </Button>
-            </div>
-          </aside>
-
-          {showPreview && (
-            <main 
-                className="flex-1 overflow-auto p-6" 
-                style={{ backgroundColor: previewContainerBg }}
-            >
-              <div 
-                id="pdf-export-container-for-h2p" 
-                className="mx-auto shadow-2xl" 
-                style={{ 
-                  transform: `scale(${zoomLevel})`, 
-                  transformOrigin: 'top center',
-                  width: options.pageSize === 'Letter' ? '8.5in' : '210mm', 
-                  minHeight: options.pageSize === 'Letter' ? '11in': '297mm', 
-                }}
-              >
-                {isOpen && ( 
-                  <div ref={exportContentRef}>
-                     {pdfPreviewContent}
-                  </div>
-                )}
               </div>
-            </main>
-          )}
-          {!showPreview && (
-             <main className="flex-1 flex items-center justify-center p-6" style={{ backgroundColor: previewContainerBg }}>
-                <div className="text-center text-muted-foreground">
-                    <Eye size={48} className="mx-auto mb-3 opacity-50"/>
-                    <p className="text-lg">{tPdfModal('previewHiddenTitle')}</p>
-                    <p className="text-sm">{tPdfModal('previewHiddenDesc')}</p>
+            </div>
+            
+            <Button 
+              onClick={handleExport} 
+              disabled={isExporting} 
+              className="w-full font-bold h-8 text-xs"
+            > 
+              <Download className="mr-1 h-3 w-3" /> 
+              {isExporting ? 'Exporting...' : 'Export PDF'} 
+            </Button>
+          </aside>
+          
+          <main className="flex-1 overflow-auto">
+            <div className="h-full w-full" style={{ 
+              transform: 'scale(0.7)', 
+              transformOrigin: 'top left',
+              width: '142.86%', // Compensa el scale(0.7) = 1/0.7 = 1.4286
+              height: '142.86%'
+            }}>
+              {isOpen && (
+                <div ref={exportContentRef} className="w-full">
+                  {pdfPreviewContent}
                 </div>
-             </main>
-          )}
+              )}
+            </div>
+          </main>
         </div>
       </DialogContent>
     </Dialog>
   );
 };
-
