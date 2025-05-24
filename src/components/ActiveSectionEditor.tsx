@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -22,14 +21,14 @@ const USER_GOOGLE_AI_API_KEY_NAME = 'USER_GOOGLE_AI_API_KEY';
 
 export const ActiveSectionEditor: React.FC = () => {
   const { state, dispatch } = useWriteUp();
-  const { writeUp, activeSectionId } = state;
+  const { writeUp, activeSectionId, editingSuggestedSection } = state;
   const { toast } = useToast();
   const t = useI18n();
   const ta = useScopedI18n('activeSectionEditor');
   const tt = useScopedI18n('toasts');
   const tai = useScopedI18n('aiConfig');
 
-  const activeSection = writeUp.sections.find(s => s.id === activeSectionId);
+  const sectionToEdit = editingSuggestedSection || writeUp.sections.find(s => s.id === activeSectionId);
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGeneratingWithAi, setIsGeneratingWithAi] = useState(false);
@@ -39,21 +38,19 @@ export const ActiveSectionEditor: React.FC = () => {
   const [editableContent, setEditableContent] = useState('');
 
   useEffect(() => {
-    if (activeSection) {
-      // Si el título/contenido es una clave de plantilla, traduce. Si no, usa el valor literal.
-      const titleIsKey = activeSection.isTemplate && activeSection.title?.startsWith('defaultSections.');
-      const contentIsKey = activeSection.isTemplate && activeSection.content?.startsWith('defaultSectionsContent.');
-      
-      setEditableTitle(titleIsKey ? t(activeSection.title as any) : activeSection.title);
-      setEditableContent(contentIsKey ? t(activeSection.content as any) : activeSection.content);
+    if (sectionToEdit) {
+      const titleIsKey = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.');
+      const contentIsKey = sectionToEdit.isTemplate && sectionToEdit.content?.startsWith('defaultSectionsContent.');
+      setEditableTitle(titleIsKey ? t(sectionToEdit.title as any) : sectionToEdit.title);
+      setEditableContent(contentIsKey ? t(sectionToEdit.content as any) : sectionToEdit.content);
     } else {
       setEditableTitle('');
       setEditableContent('');
     }
-  }, [activeSection, t]);
+  }, [sectionToEdit, t, activeSectionId, editingSuggestedSection]);
 
 
-  if (!activeSection) {
+  if (!sectionToEdit) {
     return (
       <Card className="h-full flex items-center justify-center border-dashed border-border">
         <CardContent className="text-center text-muted-foreground">
@@ -64,13 +61,14 @@ export const ActiveSectionEditor: React.FC = () => {
     );
   }
   
-  const displaySectionTitleInHeader = activeSection.isTemplate && activeSection.title?.startsWith('defaultSections.')
-    ? t(activeSection.title as any)
-    : activeSection.title;
+  const displaySectionTitleInHeader = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
+    ? t(sectionToEdit.title as any)
+    : sectionToEdit.title;
 
 
   const handleSectionChange = (field: keyof WriteUpSection, value: any) => {
     let valueToDispatch = value;
+    let extraData: Partial<WriteUpSection> = {};
     if (field === 'title') {
       setEditableTitle(value);
       valueToDispatch = value;
@@ -79,21 +77,42 @@ export const ActiveSectionEditor: React.FC = () => {
       setEditableContent(value);
       valueToDispatch = value;
     }
-    dispatch({ type: 'UPDATE_SECTION', payload: { id: activeSection.id, data: { [field]: valueToDispatch } } });
+    // Si estamos editando una sugerida, crear una copia real y limpiar el estado temporal
+    if (editingSuggestedSection) {
+      let cleanContent = editingSuggestedSection.content;
+      if (typeof cleanContent === 'string') {
+        const lines = cleanContent.split('\n');
+        if (lines[0].trim().startsWith('##')) {
+          lines.shift();
+          cleanContent = lines.join('\n').replace(/^\n+/, ''); // Quita saltos de línea extra al inicio
+        }
+      }
+      const newSection = {
+        ...editingSuggestedSection,
+        isTemplate: false,
+        title: editingSuggestedSection.title?.startsWith('defaultSections.') ? t(editingSuggestedSection.title as any) : editingSuggestedSection.title,
+        content: cleanContent,
+        [field]: valueToDispatch,
+      };
+      dispatch({ type: 'COMMIT_SUGGESTED_SECTION_EDIT', payload: newSection });
+      return;
+    }
+    // Si es una sección real, actualizar normalmente
+    dispatch({ type: 'UPDATE_SECTION', payload: { id: sectionToEdit.id, data: { [field]: valueToDispatch, ...extraData } } });
   };
 
   const handleAddScreenshot = (screenshot: Screenshot) => {
-    dispatch({ type: 'ADD_SCREENSHOT_TO_SECTION', payload: { sectionId: activeSection.id, screenshot } });
+    dispatch({ type: 'ADD_SCREENSHOT_TO_SECTION', payload: { sectionId: sectionToEdit.id, screenshot } });
   };
 
   const handleDeleteScreenshot = (screenshotId: string) => {
-    dispatch({ type: 'DELETE_SCREENSHOT_FROM_SECTION', payload: { sectionId: activeSection.id, screenshotId } });
+    dispatch({ type: 'DELETE_SCREENSHOT_FROM_SECTION', payload: { sectionId: sectionToEdit.id, screenshotId } });
   };
 
   const handleGenerateWithAi = async () => {
-    const titleForAi = activeSection.isTemplate && activeSection.title?.startsWith('defaultSections.')
-      ? t(activeSection.title as any)
-      : activeSection.title;
+    const titleForAi = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
+      ? t(sectionToEdit.title as any)
+      : sectionToEdit.title;
 
     if (!titleForAi || titleForAi.trim() === "") {
       toast({
@@ -138,7 +157,7 @@ export const ActiveSectionEditor: React.FC = () => {
 Tu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.
 
 Título de la Sección: ${titleForAi}
-Tipo de Sección: ${activeSection.type}
+Tipo de Sección: ${sectionToEdit.type}
 ${aiPrompt ? `Foco/Palabras clave del usuario para esta sección: ${aiPrompt}` : ''}
 
 Basándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.
@@ -198,7 +217,7 @@ Contenido Markdown Generado:
     setAiGeneratedSuggestion(null);
   };
 
-  const currentScreenshots = activeSection.screenshots || [];
+  const currentScreenshots = sectionToEdit.screenshots || [];
 
   return (
     <Card className="h-full overflow-y-auto border-border">
@@ -207,33 +226,33 @@ Contenido Markdown Generado:
       </CardHeader>
       <CardContent className="space-y-6 p-4">
         <div>
-          <Label htmlFor={`section-title-${activeSection.id}`}>{ta('sectionTitle')}</Label>
+          <Label htmlFor={`section-title-${sectionToEdit.id}`}>{ta('sectionTitle')}</Label>
           <Input
-            id={`section-title-${activeSection.id}`}
+            id={`section-title-${sectionToEdit.id}`}
             value={editableTitle} 
             onChange={(e) => handleSectionChange('title', e.target.value)}
             className="border-border focus:ring-foreground focus:border-foreground"
           />
         </div>
 
-        {activeSection.type === 'pregunta' && (
+        {sectionToEdit.type === 'pregunta' && (
           <div>
-            <Label htmlFor={`section-answer-${activeSection.id}`}>{ta('answerToQuestion')}</Label>
+            <Label htmlFor={`section-answer-${sectionToEdit.id}`}>{ta('answerToQuestion')}</Label>
             <Input
-              id={`section-answer-${activeSection.id}`}
-              value={activeSection.answer || ''}
+              id={`section-answer-${sectionToEdit.id}`}
+              value={sectionToEdit.answer || ''}
               onChange={(e) => handleSectionChange('answer', e.target.value)}
               className="border-border focus:ring-foreground focus:border-foreground"
             />
           </div>
         )}
 
-        {activeSection.type === 'flag' && (
+        {sectionToEdit.type === 'flag' && (
           <div>
-            <Label htmlFor={`section-flag-${activeSection.id}`}>{ta('flagValue')}</Label>
+            <Label htmlFor={`section-flag-${sectionToEdit.id}`}>{ta('flagValue')}</Label>
             <Input
-              id={`section-flag-${activeSection.id}`}
-              value={activeSection.flagValue || ''}
+              id={`section-flag-${sectionToEdit.id}`}
+              value={sectionToEdit.flagValue || ''}
               onChange={(e) => handleSectionChange('flagValue', e.target.value)}
               className="border-border focus:ring-foreground focus:border-foreground"
             />
@@ -242,7 +261,7 @@ Contenido Markdown Generado:
         
         <div>
           <MarkdownEditor
-            id={`section-content-${activeSection.id}`}
+            id={`section-content-${sectionToEdit.id}`}
             label={ta('contentMarkdown')}
             value={editableContent} 
             onChange={(value) => handleSectionChange('content', value)}
@@ -252,21 +271,21 @@ Contenido Markdown Generado:
         
         {/* Sección del Asistente IA */}
         <div className="space-y-2 pt-4 border-t border-border">
-          <Label htmlFor={`ai-prompt-${activeSection.id}`} className="text-lg font-semibold text-foreground flex items-center">
+          <Label htmlFor={`ai-prompt-${sectionToEdit.id}`} className="text-lg font-semibold text-foreground flex items-center">
             <Wand2 className="mr-2 h-5 w-5 text-foreground" /> {ta('aiAssistant')}
           </Label>
           <div className="flex gap-2">
             <Input
-              id={`ai-prompt-${activeSection.id}`}
+              id={`ai-prompt-${sectionToEdit.id}`}
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder={ta('aiPromptPlaceholder')}
               disabled={isGeneratingWithAi}
               className="flex-grow border-border focus:ring-foreground focus:border-foreground"
             />
-            <Button onClick={handleGenerateWithAi} disabled={isGeneratingWithAi || !(activeSection.isTemplate && activeSection.title?.startsWith('defaultSections.')
-      ? t(activeSection.title as any)
-      : activeSection.title)?.trim()} className="whitespace-nowrap bg-foreground text-primary-foreground font-bold">
+            <Button onClick={handleGenerateWithAi} disabled={isGeneratingWithAi || !(sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
+      ? t(sectionToEdit.title as any)
+      : sectionToEdit.title)?.trim()} className="whitespace-nowrap bg-foreground text-primary-foreground font-bold">
               {isGeneratingWithAi ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {ta('generating')}</>
               ) : (
@@ -279,7 +298,7 @@ Contenido Markdown Generado:
         {aiGeneratedSuggestion && (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor={`ai-suggestion-${activeSection.id}`} className="text-foreground font-medium">{ta('aiSuggestion')}</Label>
+              <Label htmlFor={`ai-suggestion-${sectionToEdit.id}`} className="text-foreground font-medium">{ta('aiSuggestion')}</Label>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleCopyAiSuggestion} className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
                   <ClipboardCopy className="mr-2 h-4 w-4" /> {ta('copySuggestion')}
@@ -290,7 +309,7 @@ Contenido Markdown Generado:
               </div>
             </div>
             <Textarea
-              id={`ai-suggestion-${activeSection.id}`}
+              id={`ai-suggestion-${sectionToEdit.id}`}
               value={aiGeneratedSuggestion}
               readOnly
               rows={10}

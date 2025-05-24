@@ -1,4 +1,3 @@
-
 // src/locales/en/index.ts
 export default {
   appTitle: 'CTF Write-up Builder',
@@ -243,14 +242,14 @@ export default {
     lessonsLearned: "Lessons Learned / Notes",
   },
   defaultSectionsContent: {
-    initialReconnaissanceContent: "## Initial Reconnaissance\n\nWe started with an nmap scan, followed by web directory brute-forcing...\n\nExample command:\n```bash\nnmap -sV -sC -oN nmap_scan <TARGET_IP>\n```\nCommon tools: nmap, feroxbuster, gobuster, whatweb.",
-    webEnumerationContent: "## Web Enumeration\n\nDeep analysis of the web application, searching for common vulnerabilities like XSS, SQLi, LFI/RFI.\n\nTools:\n- Burp Suite\n- Nikto\n- Dirb / Dirbuster",
-    exploitationContent: "## Exploitation\n\nDetails of the attack vector used to gain initial access.\n\nFor example, if a public exploit was used:\n```python\n# exploit_code.py\nprint(\"Exploit successful!\")\n```",
-    privilegeEscalationContent: "## Privilege Escalation\n\nMethods used to elevate privileges on the compromised system (e.g., kernel exploits, misconfigurations, SUID/GUID binaries).\n\nUseful commands:\n- `linpeas.sh` / `winpeas.bat`\n- `sudo -l`",
-    userFlagContent: "## User Flag\n\n**Flag:** `user_flag{...}`\n\n**Location:** /home/user/user.txt",
-    rootFlagContent: "## Root Flag\n\n**Flag:** `root_flag{...}`\n\n**Location:** /root/root.txt",
-    mainVulnerabilityContent: "## Main Vulnerability\n\n**Question:** What was the main vulnerability exploited for initial access?\n\n**Answer:** (Describe the vulnerability, e.g., SQL Injection in the login form)",
-    lessonsLearnedContent: "## Additional Notes / Lessons Learned\n\nKey takeaways, difficulties, or things to remember for future CTFs.\n- Don't forget to check source code comments.\n- Always try default credentials.",
+    initialReconnaissanceContent: "We started with an nmap scan, followed by web directory brute-forcing...\n\nExample command:\n```bash\nnmap -sV -sC -oN nmap_scan <TARGET_IP>\n```\nCommon tools: nmap, feroxbuster, gobuster, whatweb.",
+    webEnumerationContent: "Deep analysis of the web application, searching for common vulnerabilities like XSS, SQLi, LFI/RFI.\n\nTools:\n- Burp Suite\n- Nikto\n- Dirb / Dirbuster",
+    exploitationContent: "Details of the attack vector used to gain initial access.\n\nFor example, if a public exploit was used:\n```python\n# exploit_code.py\nprint(\"Exploit successful!\")\n```",
+    privilegeEscalationContent: "Methods used to elevate privileges on the compromised system (e.g., kernel exploits, misconfigurations, SUID/GUID binaries).\n\nUseful commands:\n- `linpeas.sh` / `winpeas.bat`\n- `sudo -l`",
+    userFlagContent: "**Flag:** `user_flag{...}`\n\n**Location:** /home/user/user.txt",
+    rootFlagContent: "**Flag:** `root_flag{...}`\n\n**Location:** /root/root.txt",
+    mainVulnerabilityContent: "**Question:** What was the main vulnerability exploited for initial access?\n\n**Answer:** (Describe the vulnerability, e.g., SQL Injection in the login form)",
+    lessonsLearnedContent: "Key takeaways, difficulties, or things to remember for future CTFs.\n- Don't forget to check source code comments.\n- Always try default credentials.",
   },
   imageUploader: {
     selectFileButton: "Select file",

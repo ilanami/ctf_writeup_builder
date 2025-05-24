@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 "use client";
 
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/accordion";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { processPdf as processPdfWithAIModels, PdfInput, AiPdfParseOutput } from '@/ai/flows/pdf-processor-flow';
+import { extractTextAndImagesWithPdfJSEnhanced } from '../utils/pdfExtractorEnhanced';
 
 
 const USER_GOOGLE_AI_API_KEY_NAME = 'USER_GOOGLE_AI_API_KEY';
@@ -63,6 +63,8 @@ const AppHeader: React.FC = () => {
   const tt = useScopedI18n('toasts');
   const tDonations = useScopedI18n('donations');
   const tai = useScopedI18n('aiConfig');
+  const tDifficulties = useScopedI18n('difficulties');
+  const tOS = useScopedI18n('operatingSystems');
   const currentLocale = useCurrentLocale();
   const changeLocale = useChangeLocale();
   const dateLocale = currentLocale === 'es' ? es : enUS;
@@ -105,74 +107,132 @@ const AppHeader: React.FC = () => {
   const handleExportMd = () => {
     const sectionsToExport = writeUp.sections.filter(section => !section.isTemplate);
     const writeUpTitleKey = writeUp.title || 'generalInfo.defaultWriteupTitle';
-    const writeUpTitleText = writeUp.title?.startsWith('generalInfo.') ? t(writeUpTitleKey as any) : (writeUp.title || t('generalInfo.defaultWriteupTitle'));
+    const writeUpTitleText = writeUp.title?.startsWith('generalInfo.') 
+      ? t(writeUpTitleKey as any) 
+      : (writeUp.title || t('generalInfo.defaultWriteupTitle'));
     const writeUpAuthorKey = writeUp.author || 'generalInfo.defaultAuthor';
-    const writeUpAuthorText = writeUp.author?.startsWith('generalInfo.') ? t(writeUpAuthorKey as any) : (writeUp.author || t('generalInfo.defaultAuthor'));
-    
-    if (sectionsToExport.length === 0 && !writeUp.machineImage && !writeUpTitleText) {
-        toast({ title: tt('info'), description: tt('noContentToExportMD') });
+    const writeUpAuthorText = writeUp.author?.startsWith('generalInfo.') 
+      ? t(writeUpAuthorKey as any) 
+      : (writeUp.author || t('generalInfo.defaultAuthor'));
+
+    // Validaciones detalladas
+    if (!writeUpTitleText || !writeUpTitleText.trim()) {
+      toast({ title: tt('error'), description: 'Falta el título del write-up.' });
+      return;
+    }
+    if (!writeUpAuthorText || !writeUpAuthorText.trim()) {
+      toast({ title: tt('error'), description: 'Falta el autor del write-up.' });
+      return;
+    }
+    if (!writeUp.date || !writeUp.date.trim()) {
+      toast({ title: tt('error'), description: 'Falta la fecha del write-up.' });
+      return;
+    }
+    if (sectionsToExport.length === 0 && !writeUp.machineImage) {
+      toast({ title: tt('info'), description: tt('noContentToExportMD') });
+      return;
+    }
+    for (let i = 0; i < sectionsToExport.length; i++) {
+      const sec = sectionsToExport[i];
+      if (!sec.title || !sec.title.trim()) {
+        toast({ title: tt('error'), description: `Falta el título en la sección ${i + 1}.` });
         return;
+      }
+      if (!sec.content || !sec.content.trim()) {
+        toast({ title: tt('error'), description: `Falta el contenido en la sección "${sec.title}".` });
+        return;
+      }
     }
-
-    let mdContent = `# ${writeUpTitleText}\n\n`;
-    mdContent += `**${t('generalInfo.author')}:** ${writeUpAuthorText}\n`;
-    mdContent += `**${t('generalInfo.date')}:** ${writeUp.date ? format(parseISO(writeUp.date), "PPP", { locale: dateLocale }) : t('generalInfo.selectDate')}\n`;
-    
-    const difficultyKey = writeUp.difficulty as keyof ReturnType<typeof useScopedI18n<'difficulties'>>;
-    const osKey = writeUp.os as keyof ReturnType<typeof useScopedI18n<'operatingSystems'>>;
-    const tDifficulties = useScopedI18n('difficulties');
-    const tOS = useScopedI18n('operatingSystems');
-
-    mdContent += `**${t('generalInfo.difficulty')}:** ${tDifficulties(difficultyKey) || writeUp.difficulty}\n`;
-    mdContent += `**${t('generalInfo.os')}:** ${tOS(osKey) || writeUp.os}\n`;
-    
-    if (writeUp.tags && writeUp.tags.length > 0) {
-        mdContent += `**${t('generalInfo.tags')}:** ${writeUp.tags.join(', ')}\n`;
-    }
-    mdContent += '\n---\n\n';
-
-    if (writeUp.machineImage) {
-        mdContent += `## ${t('generalInfo.machineImage')}\n\n`;
-        mdContent += `(Reference to image: ${writeUp.machineImage.name})\n\n`;
-    }
-
-    sectionsToExport.forEach((section: WriteUpSection, index: number) => {
-        const sectionTitle = section.isTemplate && section.title?.startsWith('defaultSections.') ? t(section.title as any) : section.title;
-        const sectionContent = section.isTemplate && section.content?.startsWith('defaultSectionsContent.') ? t(section.content as any) : section.content;
-        mdContent += `## ${index + 1}. ${sectionTitle}\n\n`;
-        if (section.type === 'pregunta' && section.answer) {
-            mdContent += `**${t('activeSectionEditor.answerToQuestion')}:** ${section.answer}\n\n`;
-        }
-        if (section.type === 'flag' && section.flagValue) {
-            mdContent += `**${t('activeSectionEditor.flagValue')}:** \`${section.flagValue}\`\n\n`;
-        }
-        mdContent += `${sectionContent}\n\n`;
-
-        if (section.screenshots && section.screenshots.length > 0) {
-            mdContent += `### ${t('activeSectionEditor.screenshots')}:\n`;
-            section.screenshots.forEach(ss => {
-                mdContent += `- ${ss.name}\n`;
-            });
-            mdContent += '\n';
-        }
-        mdContent += '---\n\n';
-    });
 
     try {
-        const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        const fileName = (writeUpTitleText || 'writeup').replace(/\s+/g, '_').toLowerCase();
-        link.download = `${fileName}.md`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        toast({ title: tt('success'), description: tt('markdownExported') });
+      let mdContent = '';
+      
+      mdContent += `# ${writeUpTitleText}\n\n`;
+      mdContent += `**${t('generalInfo.author')}:** ${writeUpAuthorText}  \n`;
+      mdContent += `**${t('generalInfo.date')}:** ${writeUp.date ? format(parseISO(writeUp.date), "PPP", { locale: dateLocale }) : t('generalInfo.selectDate')}  \n`;
+      
+      const difficultyKey = writeUp.difficulty as keyof ReturnType<typeof useScopedI18n<'difficulties'>>;
+      const osKey = writeUp.os as keyof ReturnType<typeof useScopedI18n<'operatingSystems'>>;
+      
+      mdContent += `**${t('generalInfo.difficulty')}:** ${tDifficulties(difficultyKey) || writeUp.difficulty}  \n`;
+      mdContent += `**${t('generalInfo.os')}:** ${tOS(osKey) || writeUp.os}  \n`;
+      
+      if (writeUp.tags && writeUp.tags.length > 0) {
+        mdContent += `**${t('generalInfo.tags')}:** ${writeUp.tags.join(', ')}  \n`;
+      }
+      
+      mdContent += '\n---\n\n';
+      
+      if (writeUp.machineImage) {
+        mdContent += `## ${t('generalInfo.machineImage')}\n\n`;
+        mdContent += `![${writeUp.machineImage.name}](${writeUp.machineImage.dataUrl})\n\n`;
+        mdContent += `*Imagen: ${writeUp.machineImage.name}*\n\n`;
+      }
+      
+      sectionsToExport.forEach((section: WriteUpSection, index: number) => {
+        const sectionTitle = section.isTemplate && section.title?.startsWith('defaultSections.') 
+          ? t(section.title as any) 
+          : section.title;
+        const sectionContent = section.isTemplate && section.content?.startsWith('defaultSectionsContent.') 
+          ? t(section.content as any) 
+          : section.content;
+        
+        mdContent += `## ${sectionTitle}\n\n`;
+        
+        if (section.type === 'pregunta' && section.answer?.trim()) {
+          mdContent += `> **${t('activeSectionEditor.answerToQuestion')}:** ${section.answer}\n\n`;
+        }
+        
+        if (section.type === 'flag' && section.flagValue?.trim()) {
+          mdContent += `> **${t('activeSectionEditor.flagValue')}:** \`${section.flagValue}\`\n\n`;
+        }
+        
+        if (sectionContent?.trim()) {
+          mdContent += `${sectionContent}\n\n`;
+        }
+        
+        if (section.screenshots && section.screenshots.length > 0) {
+          mdContent += `### ${t('activeSectionEditor.screenshots')}\n\n`;
+          section.screenshots.forEach((ss, ssIndex) => {
+            mdContent += `![${ss.name}](${ss.dataUrl})\n`;
+            mdContent += `*Captura ${ssIndex + 1}: ${ss.name}*\n\n`;
+          });
+        }
+        
+        if (index < sectionsToExport.length - 1) {
+          mdContent += '---\n\n';
+        }
+      });
+      
+      const blob = new Blob([mdContent], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const fileName = (writeUpTitleText || 'writeup')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .replace(/\s+/g, '_')
+        .toLowerCase()
+        .substring(0, 50);
+      
+      link.download = `${fileName}.md`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({ 
+        title: tt('success'), 
+        description: tt('markdownExported') 
+      });
+      
     } catch (error) {
-        console.error("Error exporting Markdown:", error);
-        toast({ title: tt('error'), description: tt('couldNotExportMD'), variant: "destructive" });
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      toast({ 
+        title: tt('error'), 
+        description: `Could not export Markdown file.\n${errorMsg}`,
+        variant: "destructive" 
+      });
     }
   };
 
@@ -449,130 +509,85 @@ Focus on clear, well-formatted Markdown output for the content of each section.`
   };
 
 
-  const handleImportPdfFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    let sectionsToAdd: WriteUpSection[] = [];
-    let aiProcessedSuccessfully = false;
-    let pdfjsTextExtracted = false;
-    let pdfjsImagesExtractedCount = 0;
-
-    const userApiKey = localStorage.getItem(USER_GOOGLE_AI_API_KEY_NAME);
-    if (userApiKey) {
-        try {
-            const reader = new FileReader();
-            const pdfDataUri = await new Promise<string>((resolve, reject) => {
-                reader.onload = (e_reader) => resolve(e_reader.target?.result as string);
-                reader.onerror = (err) => reject(new Error(tt('pdfCannotReadFileForAI')));
-                reader.readAsDataURL(file);
-            });
-
-            if (!pdfDataUri) throw new Error(tt('pdfCannotReadFileForAI'));
-            
-            // Usar processPdfWithAIModels que es el flujo Genkit adaptado
-            const aiFlowInput: PdfInput = { pdfDataUri };
-            const aiResult: AiPdfParseOutput = await processPdfWithAIModels(aiFlowInput); // Llamada al flujo Genkit
-            
-            if (aiResult && Array.isArray(aiResult.parsed_sections) && aiResult.parsed_sections.length > 0) {
-                aiResult.parsed_sections.forEach(sec => {
-                    sectionsToAdd.push({
-                        id: uuidv4(),
-                        type: 'notas',
-                        title: sec.title || `${tt('pdfAISectionTitlePrefix')} - ${file.name.replace(/\.pdf$/i, '')}`,
-                        content: sec.content || tt('pdfAISectionContentPlaceholder'),
-                        screenshots: [],
-                        isTemplate: false,
-                    });
-                });
-                aiProcessedSuccessfully = true;
-            } else if (aiResult && Array.isArray(aiResult.parsed_sections) && aiResult.parsed_sections.length === 0) {
-                toast({ title: tt('info'), description: tt('pdfAINoSectionsFound') });
-            }
-        } catch (error) { 
-            console.error("Error during AI processing stage for PDF (Genkit flow):", error);
-            // El toast de error debería manejarse dentro de processPdfWithAIModels o su wrapper,
-            // o aquí si la promesa es rechazada.
-             const errorMessage = error instanceof Error ? error.message : tt('unknownError');
-             toast({ title: tt('pdfAIError'), description: tt('pdfAIErrorDetails', { errorMessage }), variant: "destructive" });
-        }
-    } else {
-      // Si no hay API key, informa al usuario que la IA no se usará.
-      toast({ title: tt('info'), description: tai('apiKeyMissingDescriptionForPdf') });
+  const handleImportPdfFile = async (file: File) => {
+    if (!file || file.type !== 'application/pdf') {
+      toast({
+        title: tt('error'),
+        description: tt('selectValidPdfFile'),
+        variant: 'destructive'
+      });
+      return;
     }
-    
-    toast({ title: tt('pdfProcessingWithPdfjs'), description: tt('pdfProcessingWithPdfjsDescription') });
+
     try {
-        const { textContent, images } = await extractTextAndImagesWithPdfJS(file);
+      toast({
+        title: tt('info'),
+        description: tt('processingPdfFile')
+      });
 
-        if (textContent.trim().length > 0) {
-            pdfjsTextExtracted = true;
-            if (!aiProcessedSuccessfully || sectionsToAdd.every(s => s.content.trim().length === 0)) {
-                 sectionsToAdd.push({
-                    id: uuidv4(),
-                    type: 'notas',
-                    title: `${tt('pdfTextSectionTitlePrefix')} - ${file.name.replace(/\.pdf$/i, '')}`,
-                    content: textContent,
-                    screenshots: [],
-                    isTemplate: false,
-                });
-            } else if (aiProcessedSuccessfully && !sectionsToAdd.some(s => s.content.includes(textContent.substring(0,100)))) {
-                console.log("AI provided sections, adding raw text from pdfjs-dist as an additional/fallback section.");
-                 sectionsToAdd.push({
-                    id: uuidv4(),
-                    type: 'notas',
-                    title: `${tt('pdfTextSectionTitlePrefix')} (Fallback) - ${file.name.replace(/\.pdf$/i, '')}`,
-                    content: textContent,
-                    screenshots: [],
-                    isTemplate: false,
-                });
-            }
+      const hasAIConfig = checkAIConfiguration();
+      
+      let extractedContent: any;
+      let processingMethod: string;
+      
+      if (hasAIConfig) {
+        try {
+          toast({
+            title: tt('info'),
+            description: 'Procesando con IA para mejor estructura...'
+          });
+          
+          extractedContent = await processPdfWithAIModelsEnhanced(file);
+          processingMethod = 'AI';
+          
+        } catch (aiError) {
+          console.warn('AI processing failed, falling back to enhanced local processing:', aiError);
+          
+          toast({
+            title: tt('warning'),
+            description: 'Procesamiento con IA falló, usando método local mejorado...'
+          });
+          
+          extractedContent = await extractTextAndImagesWithPdfJSEnhanced(file);
+          processingMethod = 'Enhanced Local';
         }
-
-        if (images.length > 0) {
-            pdfjsImagesExtractedCount = images.length;
-            sectionsToAdd.push({
-                id: uuidv4(),
-                type: 'paso', 
-                title: `${tt('pdfImageSectionTitlePrefix')} - ${file.name.replace(/\.pdf$/i, '')}`,
-                content: tt('pdfImageSectionContent', { imageCount: images.length.toString() }),
-                screenshots: images,
-                isTemplate: false,
-            });
-        }
-
-        if (sectionsToAdd.length > 0) {
-            dispatch({ type: 'ADD_IMPORTED_SECTIONS', payload: sectionsToAdd });
-            
-            let summaryMessage = "";
-            if (aiProcessedSuccessfully) {
-                const aiAddedCount = sectionsToAdd.filter(s => !(s.title.startsWith(tt('pdfTextSectionTitlePrefix')) || s.title.startsWith(tt('pdfImageSectionTitlePrefix')))).length;
-                summaryMessage += tt('pdfAISectionsImportedShort', {count: aiAddedCount.toString() });
-            }
-            if (pdfjsTextExtracted && (!aiProcessedSuccessfully || sectionsToAdd.some(s => s.title.startsWith(tt('pdfTextSectionTitlePrefix'))))) {
-                summaryMessage += (summaryMessage ? " " : "") + tt('pdfTextImportedShort');
-            }
-            if (pdfjsImagesExtractedCount > 0) {
-                 summaryMessage += (summaryMessage ? " " : "") + tt('pdfImagesImportedShort', {imageCount: pdfjsImagesExtractedCount.toString()});
-            }
-            
-            if (summaryMessage.trim()) {
-                toast({ title: tt('success'), description: summaryMessage.trim() });
-            } else {
-                 toast({ title: tt('info'), description: tt('pdfImportCompletedNoNewContent') });
-            }
-
-        } else {
-            toast({ title: tt('info'), description: tt('pdfNoContentFromPdfjs') });
-        }
-
+      } else {
+        extractedContent = await extractTextAndImagesWithPdfJSEnhanced(file);
+        processingMethod = 'Enhanced Local';
+      }
+      
+      const newSections = await createWriteUpSections(extractedContent, processingMethod);
+      
+      if (newSections.length > 0) {
+        dispatch({
+          type: 'ADD_IMPORTED_SECTIONS',
+          payload: newSections
+        });
+        
+        const successMessage = processingMethod === 'AI' 
+          ? `PDF importado exitosamente con IA. ${newSections.length} secciones creadas.`
+          : `PDF importado exitosamente. ${newSections.length} secciones creadas.`;
+        
+        toast({
+          title: tt('success'),
+          description: successMessage
+        });
+      } else {
+        toast({
+          title: tt('warning'),
+          description: tt('noContentFoundInPdf'),
+          variant: 'destructive'
+        });
+      }
+      
     } catch (error) {
-        console.error("Error importing PDF with pdf.js-dist:", error);
-        const errorMessage = error instanceof Error ? error.message : tt('pdfImportErrorPdfjs');
-        toast({ title: tt('pdfImportError'), description: errorMessage, variant: "destructive" });
+      console.error('Error importing PDF:', error);
+      toast({
+        title: tt('error'),
+        description: tt('errorImportingPdf'),
+        variant: 'destructive'
+      });
     }
-
-    if (event.target) event.target.value = '';
   };
 
 
@@ -637,7 +652,7 @@ Focus on clear, well-formatted Markdown output for the content of each section.`
       <div className="flex items-center">
         <TerminalSquare className="h-8 w-8 text-foreground mr-2" />
         <h1 className="text-2xl font-bold text-foreground">
-          <span>{t('appTitle')} ></span><span className="blinking-cursor">_</span>
+          <span>{t('appTitle')} {'>'}</span><span className="blinking-cursor">_</span>
         </h1>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
@@ -663,7 +678,11 @@ Focus on clear, well-formatted Markdown output for the content of each section.`
             <span><FileType className="mr-1 h-4 w-4" /> {th('importPDF')}</span>
           </Button>
         </label>
-        <input id="import-pdf-input-header" type="file" accept=".pdf" onChange={handleImportPdfFile} className="hidden" />
+        <input id="import-pdf-input-header" type="file" accept=".pdf" onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) handleImportPdfFile(file);
+          e.target.value = '';
+        }} className="hidden" />
 
         <Button onClick={handleGistExport} variant="outline" size="sm" className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground"><AlertTriangle className="mr-1 h-4 w-4" /> {th('gist')}</Button>
         <Button onClick={handleSaveProgress} variant="outline" size="sm" className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground"><Save className="mr-1 h-4 w-4" /> {th('save')}</Button>
@@ -790,7 +809,8 @@ const StructureAndAddSectionsPanel: React.FC = () => {
 
   return (
     <div className="p-3 space-y-2 h-full flex flex-col bg-card rounded-lg shadow-md border-l border-border">
-      <Accordion type="multiple" defaultValue={['structure-panel', 'add-section-panel']} className="w-full">
+      <Accordion type="multiple" defaultValue={['structure-panel', 'suggested-sections-panel']} className="w-full">
+        {/* Estructura Real */}
         <AccordionItem value="structure-panel">
           <AccordionTrigger className="py-2 hover:no-underline">
             <h3 className="text-lg font-bold text-foreground">
@@ -798,7 +818,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
             </h3>
           </AccordionTrigger>
           <AccordionContent className="pt-1 pb-2">
-            <ScrollArea className="h-[calc(45vh-110px)] min-h-[190px] pr-1">
+            <ScrollArea className="h-[calc(40vh-110px)] min-h-[190px] pr-1">
               <div className="flex flex-col gap-2 pb-2">
                 {userSections.length > 0 ? (
                   userSections.map((section) => {
@@ -815,7 +835,25 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                       />
                     );
                   })
-                ) : templateSections.length > 0 ? (
+                ) : (
+                  <p className="text-center text-muted-foreground py-4">{tsp('noSectionsYet')}</p>
+                )}
+              </div>
+            </ScrollArea>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Secciones Sugeridas */}
+        <AccordionItem value="suggested-sections-panel">
+          <AccordionTrigger className="py-2 hover:no-underline">
+            <h3 className="text-lg font-bold text-foreground">
+              <span>SECCIONES SUGERIDAS&nbsp;&gt;</span><span className="blinking-cursor">_</span>
+            </h3>
+          </AccordionTrigger>
+          <AccordionContent className="pt-1 pb-2">
+            <ScrollArea className="h-[calc(40vh-110px)] min-h-[190px] pr-1">
+              <div className="flex flex-col gap-2 pb-2">
+                {templateSections.length > 0 ? (
                   <>
                     {templateSections.map((section) => {
                        const Icon = getSectionItemIcon(section.type, section.title);
@@ -827,8 +865,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                           icon={<Icon size={16} className="mr-2 flex-shrink-0 text-foreground/70" />}
                           isActive={section.id === activeSectionId}
                           onSelect={() => {
-                            dispatch({ type: 'UPDATE_SECTION', payload: { id: section.id, data: { isTemplate: false } } });
-                            handleSelectSection(section.id);
+                            dispatch({ type: 'SET_EDITING_SUGGESTED_SECTION', payload: section });
                           }}
                           onDelete={() => handleDeleteSection(section.id)}
                           className="opacity-70 hover:opacity-100 transition-opacity"
@@ -838,13 +875,14 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                     <p className="text-xs text-center text-muted-foreground mt-2">{tsp('templateSectionsHint')}</p>
                   </>
                 ) : (
-                  <p className="text-center text-muted-foreground py-4">{tsp('noSectionsYet')}</p>
+                  <p className="text-center text-muted-foreground py-4">No hay secciones sugeridas disponibles</p>
                 )}
               </div>
             </ScrollArea>
           </AccordionContent>
         </AccordionItem>
         
+        {/* Añadir Nueva Sección */}
         <AccordionItem value="add-section-panel">
           <AccordionTrigger className="py-2 hover:no-underline">
             <h3 className="text-lg font-bold text-foreground">
@@ -877,6 +915,220 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   );
 }
 
+// Helper: Verifica si hay API key de IA configurada
+const checkAIConfiguration = (): boolean => {
+  try {
+    const apiKey = localStorage.getItem('gemini-api-key');
+    return !!(apiKey && apiKey.trim().length > 0);
+  } catch (error) {
+    console.warn('Error checking AI configuration:', error);
+    return false;
+  }
+};
+
+// Helper: Procesamiento con IA mejorado
+const processPdfWithAIModelsEnhanced = async (file: File): Promise<any> => {
+  const apiKey = localStorage.getItem('gemini-api-key');
+  if (!apiKey) {
+    throw new Error('No AI API key configured');
+  }
+  try {
+    // Primero extraer con método local mejorado
+    const localExtraction = await extractTextAndImagesWithPdfJSEnhanced(file);
+    // Luego procesar con IA para estructura más inteligente
+    const aiProcessedContent = await enhanceWithAI(localExtraction, apiKey);
+    return aiProcessedContent;
+  } catch (error) {
+    console.error('AI processing error:', error);
+    throw error;
+  }
+};
+
+// Helper: Mejora el contenido con IA (Gemini)
+const enhanceWithAI = async (localContent: any, apiKey: string): Promise<any> => {
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-pro",
+    generationConfig: {
+      temperature: 0.1,
+      topK: 32,
+      topP: 1,
+      maxOutputTokens: 8192,
+    },
+    safetySettings: [
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+    ],
+  });
+
+  // Preparar el contenido para la IA
+  const contentForAI = {
+    extractedSections: localContent.sections.map((section: any) => ({
+      title: section.title,
+      content: section.content,
+      type: section.type,
+      hasImages: (section.screenshots && section.screenshots.length > 0)
+    })),
+    totalImages: localContent.images.length,
+    detectedFlags: localContent.sections.find((s: any) => s.flags)?.flags || [],
+    detectedCommands: localContent.sections.find((s: any) => s.commands)?.commands || []
+  };
+
+  const prompt = `
+You are an expert in cybersecurity and CTF write-ups. I have extracted content from a PDF that appears to be a CTF write-up or penetration testing report.
+
+Here's what I've extracted automatically:
+${JSON.stringify(contentForAI, null, 2)}
+
+Please analyze this content and provide a better structured version following these guidelines:
+
+1. **Organize into logical CTF sections** like:
+   - Reconnaissance/Enumeration
+   - Vulnerability Discovery  
+   - Exploitation
+   - Privilege Escalation
+   - Post Exploitation
+   - Conclusion
+
+2. **Improve section titles** to be more descriptive and professional
+
+3. **Enhance content formatting** with proper markdown
+
+4. **Group related information** together logically
+
+5. **Identify the main storyline** of the CTF/pentest
+
+6. **Preserve all technical details** (flags, commands, IPs, URLs)
+
+7. **Suggest section types** using: 'paso', 'pregunta', 'flag', 'notas'
+
+Return your response as a JSON object with this structure:
+{
+  "sections": [
+    {
+      "title": "Section Title",
+      "content": "Enhanced markdown content",
+      "type": "paso|pregunta|flag|notas",
+      "priority": 1-10,
+      "flags": ["flag1", "flag2"], // if applicable
+      "commands": ["cmd1", "cmd2"] // if applicable
+    }
+  ],
+  "summary": "Brief summary of what this CTF/pentest covers",
+  "language": "en|es"
+}
+
+Focus on creating a professional, well-structured write-up while preserving all technical information.
+`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // Intentar parsear respuesta JSON
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No valid JSON found in AI response');
+    }
+
+    const aiResponse = JSON.parse(jsonMatch[0]);
+    return aiResponse;
+  } catch (error) {
+    console.error('Error enhancing with AI:', error);
+    throw error;
+  }
+};
+
+// Helper: Convierte el contenido extraído en secciones WriteUpSection[]
+const createWriteUpSections = async (extractedContent: any, method: string): Promise<WriteUpSection[]> => {
+  console.log('🔍 DEBUG - extractedContent:', extractedContent);
+  console.log('🔍 DEBUG - extractedContent.sections:', extractedContent.sections);
+  console.log('🔍 DEBUG - extractedContent.images:', extractedContent.images);
+  
+  const newSections: WriteUpSection[] = [];
+  
+  // Si hay resumen de IA, añadirlo como primera sección
+  if (extractedContent.aiSummary) {
+    console.log('🔍 DEBUG - Adding AI summary section');
+    newSections.push({
+      id: uuidv4(),
+      type: 'notas',
+      title: 'Resumen del Análisis',
+      content: `**Procesado con IA**\n\n${extractedContent.aiSummary}`,
+      screenshots: [],
+      isTemplate: false
+    });
+  }
+  
+  // Agregar secciones de contenido
+  if (extractedContent.sections && Array.isArray(extractedContent.sections)) {
+    console.log(`🔍 DEBUG - Processing ${extractedContent.sections.length} sections`);
+    
+    extractedContent.sections.forEach((section: any, index: number) => {
+      console.log(`🔍 DEBUG - Section ${index}:`, section);
+      
+      const newSection: WriteUpSection = {
+        id: uuidv4(),
+        type: section.type as SectionType,
+        title: section.title || `Sección ${index + 1}`,
+        content: section.content || 'Sin contenido',
+        screenshots: (section.screenshots || []).map((img: any) => ({
+          id: uuidv4(),
+          name: img.name,
+          dataUrl: img.dataUrl
+        })),
+        isTemplate: false,
+        ...(section.type === 'flag' && section.flags?.length > 0 && {
+          flagValue: section.flags[0]
+        }),
+        ...(section.type === 'pregunta' && section.answer && {
+          answer: section.answer
+        })
+      };
+      
+      console.log(`🔍 DEBUG - Created section:`, newSection);
+      newSections.push(newSection);
+    });
+  } else {
+    console.log('🔍 DEBUG - No sections found or sections is not an array');
+  }
+  
+  // Añadir imágenes no asociadas como secciones separadas
+  const unassociatedImages = extractedContent.images?.filter((img: any) => 
+    !newSections.some(section => 
+      section.screenshots.some(screenshot => screenshot.name === img.name)
+    )
+  ) || [];
+  
+  console.log(`🔍 DEBUG - Unassociated images: ${unassociatedImages.length}`);
+  
+  if (unassociatedImages.length > 0) {
+    const imageSection: WriteUpSection = {
+      id: uuidv4(),
+      type: 'paso',
+      title: method === 'AI' ? 'Imágenes Adicionales (IA)' : 'Imágenes Extraídas',
+      content: `Se extrajeron ${unassociatedImages.length} imágenes adicionales del PDF.`,
+      screenshots: unassociatedImages.map((img: any) => ({
+        id: uuidv4(),
+        name: img.name,
+        dataUrl: img.dataUrl
+      })),
+      isTemplate: false
+    };
+    
+    console.log(`🔍 DEBUG - Created image section:`, imageSection);
+    newSections.push(imageSection);
+  }
+  
+  console.log(`🔍 DEBUG - Total sections created: ${newSections.length}`);
+  console.log(`🔍 DEBUG - Final sections:`, newSections);
+  
+  return newSections;
+};
 
 export const AppLayout: React.FC = () => {
   const { state } = useWriteUp();

@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -12,6 +11,7 @@ interface WriteUpState {
   currentView: AppView;
   activeSectionId: string | null;
   isDirty: boolean; // To track unsaved changes for localStorage
+  editingSuggestedSection?: WriteUpSection | null;
 }
 
 type WriteUpAction =
@@ -29,13 +29,16 @@ type WriteUpAction =
   | { type: 'SET_ACTIVE_SECTION'; payload: string | null }
   | { type: 'SET_VIEW'; payload: AppView }
   | { type: 'RESET_WRITEUP' }
-  | { type: 'SET_IS_DIRTY', payload: boolean };
+  | { type: 'SET_IS_DIRTY', payload: boolean }
+  | { type: 'SET_EDITING_SUGGESTED_SECTION'; payload: WriteUpSection | null }
+  | { type: 'COMMIT_SUGGESTED_SECTION_EDIT'; payload: WriteUpSection };
 
 const initialState: WriteUpState = {
   writeUp: createDefaultWriteUp(),
   currentView: 'editor',
   activeSectionId: null,
   isDirty: false,
+  editingSuggestedSection: null,
 };
 
 const sanitizeSection = (section: WriteUpSection): WriteUpSection => {
@@ -176,6 +179,22 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
     case 'SET_IS_DIRTY':
       newState = { ...state, isDirty: action.payload };
       break;
+    case 'SET_EDITING_SUGGESTED_SECTION':
+      newState = { ...state, editingSuggestedSection: action.payload, activeSectionId: null };
+      break;
+    case 'COMMIT_SUGGESTED_SECTION_EDIT': {
+      const prebuiltSectionWithNewId = sanitizeSection({ ...action.payload, id: uuidv4(), isTemplate: false });
+      newState = {
+        ...state,
+        editingSuggestedSection: null,
+        writeUp: {
+          ...state.writeUp,
+          sections: [...state.writeUp.sections, prebuiltSectionWithNewId],
+        },
+        activeSectionId: prebuiltSectionWithNewId.id,
+      };
+      break;
+    }
     default:
       // https://github.com/typescript-eslint/typescript-eslint/issues/6149
       // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
