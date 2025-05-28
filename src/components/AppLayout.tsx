@@ -7,7 +7,7 @@ import { ActiveSectionEditor } from './ActiveSectionEditor';
 import { WriteUpPreview } from './WriteUpPreview';
 import { useWriteUp } from '@/hooks/useWriteUp';
 import { Button } from './ui/button';
-import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive } from 'lucide-react';
+import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info } from 'lucide-react';
 import { PdfExportModal } from './PdfExportModal';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -31,7 +31,11 @@ import {
 } from "@/components/ui/accordion";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { processPdf as processPdfWithAIModels, PdfInput, AiPdfParseOutput } from '@/ai/flows/pdf-processor-flow';
+import { extractBasicTextFromPDF } from '../utils/pdfExtractorBasic';
 import { extractTextAndImagesWithPdfJSEnhanced } from '../utils/pdfExtractorEnhanced';
+import ApiKeyConfigModal from './ApiKeyConfigModal';
+import AboutModal from './AboutModal';
+import HelpModal from './HelpModal';
 
 
 const USER_GOOGLE_AI_API_KEY_NAME = 'USER_GOOGLE_AI_API_KEY';
@@ -69,33 +73,32 @@ const AppHeader: React.FC = () => {
   const changeLocale = useChangeLocale();
   const dateLocale = currentLocale === 'es' ? es : enUS;
 
-  const [apiKeyInputValue, setApiKeyInputValue] = useState('');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [currentApiKey, setCurrentApiKey] = useState<string | null>(null);
+  const [apiKeyConfig, setApiKeyConfig] = useState({ provider: 'gemini', apiKey: '' });
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   useEffect(() => {
-    const storedKey = localStorage.getItem(USER_GOOGLE_AI_API_KEY_NAME);
-    setCurrentApiKey(storedKey);
-    if (isApiKeyModalOpen) {
-      setApiKeyInputValue(storedKey || '');
+    const savedProvider = localStorage.getItem('aiProvider') || 'gemini';
+    const savedEncryptedKey = localStorage.getItem('aiApiKey') || '';
+    let apiKey = '';
+    try {
+      apiKey = savedEncryptedKey ? atob(savedEncryptedKey) : '';
+    } catch {
+      apiKey = savedEncryptedKey;
     }
+    setApiKeyConfig({ provider: savedProvider, apiKey });
   }, [isApiKeyModalOpen]);
 
-  const handleSaveApiKey = () => {
-    if (apiKeyInputValue.trim()) {
-      localStorage.setItem(USER_GOOGLE_AI_API_KEY_NAME, apiKeyInputValue.trim());
-      setCurrentApiKey(apiKeyInputValue.trim());
-      toast({ title: tai('apiKeySavedTitle'), description: tai('apiKeySavedDescription') });
-      setIsApiKeyModalOpen(false);
-    } else {
-      toast({ title: tai('apiKeyEmptyTitle'), description: tai('apiKeyEmptyDescription'), variant: 'destructive' });
-    }
+  const handleSaveApiKey = ({ provider, apiKey }) => {
+    setApiKeyConfig({ provider, apiKey });
+    setIsApiKeyModalOpen(false);
   };
 
   const handleDeleteApiKey = () => {
     localStorage.removeItem(USER_GOOGLE_AI_API_KEY_NAME);
-    setCurrentApiKey(null);
-    setApiKeyInputValue('');
+    setApiKeyConfig({ provider: 'gemini', apiKey: '' });
+    setIsApiKeyModalOpen(false);
     toast({ title: tai('apiKeyDeletedTitle'), description: tai('apiKeyDeletedDescription') });
   };
 
@@ -236,8 +239,6 @@ const AppHeader: React.FC = () => {
     }
   };
 
-  const handleGistExport = () => toast({ title: tt('info'), description: tt('gistNotImplemented') });
-
   const handleImportJson = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -258,13 +259,8 @@ const AppHeader: React.FC = () => {
             if (!Array.isArray(importedData.sections)) {
                throw new Error(tt('jsonImportErrorDetails', {errorMessage: "Formato JSON inválido. La propiedad 'sections' debe ser un array."}));
             }
-            const sectionsToImport = importedData.sections as WriteUpSection[];
-            if (sectionsToImport.length > 0) {
-              dispatch({ type: 'ADD_IMPORTED_SECTIONS', payload: sectionsToImport });
-              toast({ title: tt('success'), description: tt('jsonSectionsImported') });
-            } else {
-              toast({ title: tt('info'), description: tt('jsonNoSectionsToImport') });
-            }
+            dispatch({ type: 'LOAD_WRITEUP', payload: importedData });
+            toast({ title: tt('success'), description: tt('jsonSectionsImported') });
           } else {
              toast({ title: tt('info'), description: tt('jsonNoSectionsToImportNothingToAdd') });
           }
@@ -326,271 +322,6 @@ const AppHeader: React.FC = () => {
     if (event.target) event.target.value = ''; 
   };
   
- 
-  const processPdfWithAI = async (pdfDataUri: string, fileName: string): Promise<AiProcessedSection[]> => {
-    const userApiKey = localStorage.getItem(USER_GOOGLE_AI_API_KEY_NAME);
-    if (!userApiKey) {
-      console.warn(tai('apiKeyMissingDescriptionForPdf'));
-      return []; 
-    }
-
-    toast({ title: tt('pdfProcessingWithAI'), description: tt('pdfProcessingWithAIDescription') });
-    try {
-      const genAI = new GoogleGenerativeAI(userApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
-
-      const promptText = `You are an expert in analyzing technical documents, especially cybersecurity CTF (Capture The Flag) write-ups.
-Your task is to process the provided PDF content and extract its structure into logical sections.
-
-For the PDF provided (internally represented by the data URI):
-1. Identify the main sections or logical parts of the document. These could be chapters, major headings, or distinct topics.
-2. For each section you identify:
-    a. Extract or formulate a concise and descriptive title for that section.
-    b. Extract the relevant textual content for that section and format it as well-structured Markdown. Ensure code blocks, lists, and other formatting are preserved or appropriately converted to Markdown.
-    c. **Crucially**: If you encounter any images within a section of the PDF, you MUST insert a placeholder string in the Markdown content *exactly where the image appeared*. The placeholder format is: "[IMAGEN: Provide a 1-2 sentence, human-readable description of the image's content and its relevance or context within the section. For example: '[IMAGEN: Nmap scan results showing open ports 22, 80, and 443 on the target IP.]' or '[IMAGEN: Screenshot of the web application's dashboard after successful login.]']". Do NOT attempt to describe the image in prose outside this placeholder. Do NOT try to reproduce the image data itself.
-3. Return the extracted information as a JSON object matching the output schema: { "parsed_sections": [ { "title": "string", "content": "string" }, ... ] }.
-
-If the PDF is unparsable, contains no discernible text, or is not a document format you can understand, return an empty "parsed_sections" array.
-Do not invent content. Only extract and structure what is present in the PDF.
-Focus on clear, well-formatted Markdown output for the content of each section.`;
-      
-      const dataUriParts = pdfDataUri.split(',');
-      const base64Data = dataUriParts.length > 1 ? dataUriParts[1] : '';
-      if (!base64Data) {
-        console.error("Could not extract base64 data from PDF Data URI for AI processing.");
-        toast({ title: tt('pdfAIError'), description: tt('pdfAIErrorInvalidDataUri'), variant: "destructive" });
-        return [];
-      }
-
-      const parts = [
-        { text: promptText },
-        {
-          inlineData: {
-            mimeType: 'application/pdf', 
-            data: base64Data
-          }
-        }
-      ];
-      
-      const generationConfig = {
-        responseMimeType: "application/json", 
-      };
-       const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      ];
-
-      const result = await model.generateContent({ contents: [{ role: "user", parts }], generationConfig, safetySettings });
-      const response = result.response;
-      const responseText = response.text(); 
-      
-      let parsedJsonResponse;
-      try {
-        parsedJsonResponse = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error("Error parsing JSON response from AI for PDF processing:", parseError, "Raw response:", responseText);
-        toast({ title: tt('pdfAIError'), description: tt('pdfAIErrorParsing', {rawResponse: responseText}), variant: "destructive" });
-        return [];
-      }
-
-      if (parsedJsonResponse && Array.isArray(parsedJsonResponse.parsed_sections)) {
-        return parsedJsonResponse.parsed_sections as AiProcessedSection[];
-      } else {
-        console.warn("AI response for PDF did not contain 'parsed_sections' array or was not as expected. Parsed JSON:", parsedJsonResponse, "Raw Text:", responseText);
-        return [];
-      }
-
-    } catch (error) {
-      console.error("Error processing PDF with AI (user key):", error);
-      const errorMessage = error instanceof Error ? error.message : tt('unknownError');
-      toast({ title: tt('pdfAIError'), description: tt('pdfAIErrorDetails', { errorMessage }), variant: "destructive" });
-      return [];
-    }
-  };
-
-
-  const extractTextAndImagesWithPdfJS = async (file: File): Promise<{ textContent: string; images: Screenshot[] }> => {
-    console.log("extractTextAndImagesWithPdfJS: Starting extraction for file:", file.name);
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
-    const extractedImages: Screenshot[] = [];
-
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      console.log(`extractTextAndImagesWithPdfJS: Processing page ${i}`);
-      const page = await pdfDoc.getPage(i);
-      const textContentItems = await page.getTextContent();
-      
-      // Join text items with single spaces to form page text
-      const pageText = textContentItems.items.map((item: any) => item.str).join(' ');
-      fullText += pageText.trim();
-      if (i < pdfDoc.numPages) { // Add double newline between pages if not the last page
-        fullText += "\n\n";
-      }
-
-      const operatorList = await page.getOperatorList();
-      for (let j = 0; j < operatorList.fnArray.length; j++) {
-        if (operatorList.fnArray[j] === OPS.paintImageXObject) {
-          const imageName = operatorList.argsArray[j][0];
-          console.log(`extractTextAndImagesWithPdfJS: Found image operation for '${imageName}' on page ${i}`);
-          try {
-            // @ts-ignore
-            const imgData = await page.objs.get(imageName);
-            console.log(`extractTextAndImagesWithPdfJS: imgData for '${imageName}':`, { width: imgData?.width, height: imgData?.height, kind: imgData?.kind, dataType: typeof imgData?.data });
-
-            if (imgData && imgData.data && imgData.width && imgData.height) {
-              const canvas = document.createElement('canvas');
-              canvas.width = imgData.width;
-              canvas.height = imgData.height;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                let pixelDataArray;
-                 if (imgData.data instanceof Uint8Array || imgData.data instanceof Uint8ClampedArray || Array.isArray(imgData.data)) {
-                    pixelDataArray = new Uint8ClampedArray(imgData.data);
-                } else if (imgData.data instanceof ArrayBuffer) {
-                    pixelDataArray = new Uint8ClampedArray(imgData.data);
-                } else {
-                    console.warn(`extractTextAndImagesWithPdfJS: Unexpected image data type for ${imageName} on page ${i}. Type: ${typeof imgData.data}`);
-                    continue;
-                }
-                
-                const imageData = ctx.createImageData(imgData.width, imgData.height);
-                
-                if (pixelDataArray.length === imgData.width * imgData.height * 4) { // RGBA
-                    console.log(`extractTextAndImagesWithPdfJS: Processing RGBA image '${imageName}'`);
-                    imageData.data.set(pixelDataArray);
-                } else if (pixelDataArray.length === imgData.width * imgData.height * 3) { // RGB
-                    console.log(`extractTextAndImagesWithPdfJS: Processing RGB image '${imageName}', converting to RGBA.`);
-                    const rgbaData = new Uint8ClampedArray(imgData.width * imgData.height * 4);
-                    for (let k = 0, l = 0; k < pixelDataArray.length; k += 3, l += 4) {
-                        rgbaData[l] = pixelDataArray[k];
-                        rgbaData[l + 1] = pixelDataArray[k + 1];
-                        rgbaData[l + 2] = pixelDataArray[k + 2];
-                        rgbaData[l + 3] = 255; 
-                    }
-                    imageData.data.set(rgbaData);
-                } else if (pixelDataArray.length === imgData.width * imgData.height && (imgData.kind === 1 || imgData.bpc === 8)) { // Grayscale, assuming 8-bit per component
-                    console.log(`extractTextAndImagesWithPdfJS: Processing Grayscale image '${imageName}', converting to RGBA.`);
-                    const rgbaData = new Uint8ClampedArray(imgData.width * imgData.height * 4);
-                    for (let k = 0, l = 0; k < pixelDataArray.length; k++, l += 4) {
-                        rgbaData[l] = pixelDataArray[k];
-                        rgbaData[l + 1] = pixelDataArray[k];
-                        rgbaData[l + 2] = pixelDataArray[k];
-                        rgbaData[l + 3] = 255; 
-                    }
-                    imageData.data.set(rgbaData);
-                } else {
-                    console.warn(`extractTextAndImagesWithPdfJS: Unsupported image data format for ${imageName} on page ${i}. Kind: ${imgData.kind}, BPC: ${imgData.bpc}, Length: ${pixelDataArray.length}, Expected RGB: ${imgData.width * imgData.height * 3}, Expected RGBA: ${imgData.width * imgData.height * 4}`);
-                    continue;
-                }
-                
-                try {
-                  ctx.putImageData(imageData, 0, 0);
-                  const dataUrl = canvas.toDataURL('image/png');
-                  extractedImages.push({ id: uuidv4(), name: `pdf_image_p${i}_${imageName}.png`, dataUrl: dataUrl });
-                  console.log(`extractTextAndImagesWithPdfJS: Successfully extracted image '${imageName}' from page ${i} as PNG data URI.`);
-                } catch (canvasError) {
-                  console.error(`extractTextAndImagesWithPdfJS: Error putting ImageData or converting canvas to DataURL for '${imageName}':`, canvasError);
-                }
-              }
-            } else {
-              console.warn(`extractTextAndImagesWithPdfJS: imgData for '${imageName}' missing critical properties (data, width, or height).`);
-            }
-          } catch (imgError) {
-            console.warn(`extractTextAndImagesWithPdfJS: Could not extract or process image ${imageName} from page ${i}:`, imgError);
-          }
-        }
-      }
-    }
-    console.log(`extractTextAndImagesWithPdfJS: Finished. Extracted ${fullText.trim().length > 0 ? 'text' : 'no text'} and ${extractedImages.length} images.`);
-    return { textContent: fullText.trim(), images: extractedImages };
-  };
-
-
-  const handleImportPdfFile = async (file: File) => {
-    if (!file || file.type !== 'application/pdf') {
-      toast({
-        title: tt('error'),
-        description: tt('selectValidPdfFile'),
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      toast({
-        title: tt('info'),
-        description: tt('processingPdfFile')
-      });
-
-      const hasAIConfig = checkAIConfiguration();
-      
-      let extractedContent: any;
-      let processingMethod: string;
-      
-      if (hasAIConfig) {
-        try {
-          toast({
-            title: tt('info'),
-            description: 'Procesando con IA para mejor estructura...'
-          });
-          
-          extractedContent = await processPdfWithAIModelsEnhanced(file);
-          processingMethod = 'AI';
-          
-        } catch (aiError) {
-          console.warn('AI processing failed, falling back to enhanced local processing:', aiError);
-          
-          toast({
-            title: tt('warning'),
-            description: 'Procesamiento con IA falló, usando método local mejorado...'
-          });
-          
-          extractedContent = await extractTextAndImagesWithPdfJSEnhanced(file);
-          processingMethod = 'Enhanced Local';
-        }
-      } else {
-        extractedContent = await extractTextAndImagesWithPdfJSEnhanced(file);
-        processingMethod = 'Enhanced Local';
-      }
-      
-      const newSections = await createWriteUpSections(extractedContent, processingMethod);
-      
-      if (newSections.length > 0) {
-        dispatch({
-          type: 'ADD_IMPORTED_SECTIONS',
-          payload: newSections
-        });
-        
-        const successMessage = processingMethod === 'AI' 
-          ? `PDF importado exitosamente con IA. ${newSections.length} secciones creadas.`
-          : `PDF importado exitosamente. ${newSections.length} secciones creadas.`;
-        
-        toast({
-          title: tt('success'),
-          description: successMessage
-        });
-      } else {
-        toast({
-          title: tt('warning'),
-          description: tt('noContentFoundInPdf'),
-          variant: 'destructive'
-        });
-      }
-      
-    } catch (error) {
-      console.error('Error importing PDF:', error);
-      toast({
-        title: tt('error'),
-        description: tt('errorImportingPdf'),
-        variant: 'destructive'
-      });
-    }
-  };
-
-
   const handleExportJsonBackup = () => { 
     try {
       const jsonString = JSON.stringify(state.writeUp, null, 2);
@@ -656,6 +387,31 @@ Focus on clear, well-formatted Markdown output for the content of each section.`
         </h1>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" className="bg-foreground text-primary-foreground font-bold">
+              <PlusCircle className="mr-1 h-4 w-4" /> {th('new')}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{th('newWriteupTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {th('newWriteupDescription')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-bold">{th('cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleNewWriteUp} className="bg-foreground text-primary-foreground font-bold">{th('continue')}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button onClick={() => setIsAboutOpen(true)} variant="outline" size="sm" title={t('about.title')} className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
+          <Info className="mr-1 h-4 w-4" /> {t('about.title')}
+        </Button>
+        <Button onClick={() => setIsHelpOpen(true)} variant="outline" size="sm" title={t('help.title')} className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
+          <HelpCircle className="mr-1 h-4 w-4" /> {t('help.title')}
+        </Button>
         <Button onClick={handleExportMd} variant="outline" size="sm" className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground"><FileText className="mr-1 h-4 w-4" /> {th('exportMD')}</Button>
         <PdfExportModal />
         
@@ -673,54 +429,17 @@ Focus on clear, well-formatted Markdown output for the content of each section.`
         </label>
         <input id="import-md-input-header" type="file" accept=".md,.txt,text/markdown" onChange={handleImportMdFile} className="hidden" />
         
-        <label htmlFor="import-pdf-input-header" className="mb-0">
-          <Button variant="outline" size="sm" asChild className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
-            <span><FileType className="mr-1 h-4 w-4" /> {th('importPDF')}</span>
-          </Button>
-        </label>
-        <input id="import-pdf-input-header" type="file" accept=".pdf" onChange={e => {
-          const file = e.target.files?.[0];
-          if (file) handleImportPdfFile(file);
-          e.target.value = '';
-        }} className="hidden" />
-
-        <Button onClick={handleGistExport} variant="outline" size="sm" className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground"><AlertTriangle className="mr-1 h-4 w-4" /> {th('gist')}</Button>
         <Button onClick={handleSaveProgress} variant="outline" size="sm" className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground"><Save className="mr-1 h-4 w-4" /> {th('save')}</Button>
         
-         <AlertDialog open={isApiKeyModalOpen} onOpenChange={setIsApiKeyModalOpen}>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" title={tai('configureApiKeyButton')} className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
-              <KeyRound className="mr-1 h-4 w-4" /> {th('configureApiKey')}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{tai('configureApiKeyTitle')}</AlertDialogTitle>
-              <AlertDialogDescription className="text-left whitespace-pre-wrap">
-                {tai('configureApiKeyDescription')}
-                {currentApiKey && <p className="mt-2 text-xs text-muted-foreground">{tai('currentKey')}: <span className="font-mono break-all">{currentApiKey.substring(0,4)}...{currentApiKey.substring(currentApiKey.length - 4)}</span></p>}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="api-key-input">{tai('apiKeyLabel')}</Label>
-              <Input 
-                id="api-key-input" 
-                type="password" 
-                value={apiKeyInputValue} 
-                onChange={(e) => setApiKeyInputValue(e.target.value)}
-                placeholder={tai('apiKeyPlaceholder')}
-                className="border-border focus:ring-foreground focus:border-foreground"
-              />
-            </div>
-            <AlertDialogFooter className="mt-2">
-              <AlertDialogCancel onClick={() => setIsApiKeyModalOpen(false)} className="font-bold">{th('cancel')}</AlertDialogCancel>
-              {currentApiKey && (
-                <Button variant="destructive" onClick={handleDeleteApiKey} className="font-bold">{tai('deleteKeyButton')}</Button>
-              )}
-              <AlertDialogAction onClick={handleSaveApiKey} className="bg-foreground text-primary-foreground font-bold">{tai('saveKeyButton')}</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button onClick={() => setIsApiKeyModalOpen(true)} variant="outline" size="sm" title={tai('configureApiKeyButton')} className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
+          <KeyRound className="mr-1 h-4 w-4" /> {th('configureApiKey')}
+        </Button>
+        {isApiKeyModalOpen && (
+          <ApiKeyConfigModal
+            onSave={handleSaveApiKey}
+            onCancel={() => setIsApiKeyModalOpen(false)}
+          />
+        )}
         
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -760,26 +479,9 @@ Focus on clear, well-formatted Markdown output for the content of each section.`
           <Languages className="mr-1 h-4 w-4" />
           {currentLocale === 'es' ? th('switchToEnglish') : th('switchToSpanish')}
         </Button>
-         <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" className="bg-foreground text-primary-foreground font-bold">
-                <PlusCircle className="mr-1 h-4 w-4" /> {th('new')}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{th('newWriteupTitle')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {th('newWriteupDescription')}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="font-bold">{th('cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleNewWriteUp} className="bg-foreground text-primary-foreground font-bold">{th('continue')}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
       </div>
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </header>
   );
 };
@@ -823,16 +525,24 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                 {userSections.length > 0 ? (
                   userSections.map((section) => {
                     const Icon = getSectionItemIcon(section.type, section.title);
-                    const displayTitle = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.') ? t(section.title as any) : section.title; 
+                    const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
+                    const displayTitle = isI18nKey ? t(section.title as any) : section.title;
+                    const description = section.type ? tst(`${section.type}.description` as any) : '';
                     return (
-                      <SectionItemCard
+                      <Button
                         key={section.id}
-                        section={{...section, title: displayTitle}} 
-                        icon={<Icon size={16} className="mr-2 flex-shrink-0 text-foreground" />}
-                        isActive={section.id === activeSectionId}
-                        onSelect={() => handleSelectSection(section.id)}
-                        onDelete={() => handleDeleteSection(section.id)}
-                      />
+                        variant="outline"
+                        onClick={() => handleSelectSection(section.id)}
+                        className={`justify-start text-left h-auto py-2 text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground ${section.id === activeSectionId ? 'border-foreground ring-2 ring-foreground shadow-lg' : ''}`}
+                      >
+                        <div className="flex items-start">
+                          <Icon className="mr-2 h-5 w-5 mt-0.5 flex-shrink-0 text-foreground" />
+                          <div>
+                            <span className="font-medium text-foreground">{displayTitle}</span>
+                            {description && <p className="text-xs text-muted-foreground whitespace-normal">{description}</p>}
+                          </div>
+                        </div>
+                      </Button>
                     );
                   })
                 ) : (
@@ -914,221 +624,6 @@ const StructureAndAddSectionsPanel: React.FC = () => {
     </div>
   );
 }
-
-// Helper: Verifica si hay API key de IA configurada
-const checkAIConfiguration = (): boolean => {
-  try {
-    const apiKey = localStorage.getItem('gemini-api-key');
-    return !!(apiKey && apiKey.trim().length > 0);
-  } catch (error) {
-    console.warn('Error checking AI configuration:', error);
-    return false;
-  }
-};
-
-// Helper: Procesamiento con IA mejorado
-const processPdfWithAIModelsEnhanced = async (file: File): Promise<any> => {
-  const apiKey = localStorage.getItem('gemini-api-key');
-  if (!apiKey) {
-    throw new Error('No AI API key configured');
-  }
-  try {
-    // Primero extraer con método local mejorado
-    const localExtraction = await extractTextAndImagesWithPdfJSEnhanced(file);
-    // Luego procesar con IA para estructura más inteligente
-    const aiProcessedContent = await enhanceWithAI(localExtraction, apiKey);
-    return aiProcessedContent;
-  } catch (error) {
-    console.error('AI processing error:', error);
-    throw error;
-  }
-};
-
-// Helper: Mejora el contenido con IA (Gemini)
-const enhanceWithAI = async (localContent: any, apiKey: string): Promise<any> => {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-pro",
-    generationConfig: {
-      temperature: 0.1,
-      topK: 32,
-      topP: 1,
-      maxOutputTokens: 8192,
-    },
-    safetySettings: [
-      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-    ],
-  });
-
-  // Preparar el contenido para la IA
-  const contentForAI = {
-    extractedSections: localContent.sections.map((section: any) => ({
-      title: section.title,
-      content: section.content,
-      type: section.type,
-      hasImages: (section.screenshots && section.screenshots.length > 0)
-    })),
-    totalImages: localContent.images.length,
-    detectedFlags: localContent.sections.find((s: any) => s.flags)?.flags || [],
-    detectedCommands: localContent.sections.find((s: any) => s.commands)?.commands || []
-  };
-
-  const prompt = `
-You are an expert in cybersecurity and CTF write-ups. I have extracted content from a PDF that appears to be a CTF write-up or penetration testing report.
-
-Here's what I've extracted automatically:
-${JSON.stringify(contentForAI, null, 2)}
-
-Please analyze this content and provide a better structured version following these guidelines:
-
-1. **Organize into logical CTF sections** like:
-   - Reconnaissance/Enumeration
-   - Vulnerability Discovery  
-   - Exploitation
-   - Privilege Escalation
-   - Post Exploitation
-   - Conclusion
-
-2. **Improve section titles** to be more descriptive and professional
-
-3. **Enhance content formatting** with proper markdown
-
-4. **Group related information** together logically
-
-5. **Identify the main storyline** of the CTF/pentest
-
-6. **Preserve all technical details** (flags, commands, IPs, URLs)
-
-7. **Suggest section types** using: 'paso', 'pregunta', 'flag', 'notas'
-
-Return your response as a JSON object with this structure:
-{
-  "sections": [
-    {
-      "title": "Section Title",
-      "content": "Enhanced markdown content",
-      "type": "paso|pregunta|flag|notas",
-      "priority": 1-10,
-      "flags": ["flag1", "flag2"], // if applicable
-      "commands": ["cmd1", "cmd2"] // if applicable
-    }
-  ],
-  "summary": "Brief summary of what this CTF/pentest covers",
-  "language": "en|es"
-}
-
-Focus on creating a professional, well-structured write-up while preserving all technical information.
-`;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    // Intentar parsear respuesta JSON
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No valid JSON found in AI response');
-    }
-
-    const aiResponse = JSON.parse(jsonMatch[0]);
-    return aiResponse;
-  } catch (error) {
-    console.error('Error enhancing with AI:', error);
-    throw error;
-  }
-};
-
-// Helper: Convierte el contenido extraído en secciones WriteUpSection[]
-const createWriteUpSections = async (extractedContent: any, method: string): Promise<WriteUpSection[]> => {
-  console.log('🔍 DEBUG - extractedContent:', extractedContent);
-  console.log('🔍 DEBUG - extractedContent.sections:', extractedContent.sections);
-  console.log('🔍 DEBUG - extractedContent.images:', extractedContent.images);
-  
-  const newSections: WriteUpSection[] = [];
-  
-  // Si hay resumen de IA, añadirlo como primera sección
-  if (extractedContent.aiSummary) {
-    console.log('🔍 DEBUG - Adding AI summary section');
-    newSections.push({
-      id: uuidv4(),
-      type: 'notas',
-      title: 'Resumen del Análisis',
-      content: `**Procesado con IA**\n\n${extractedContent.aiSummary}`,
-      screenshots: [],
-      isTemplate: false
-    });
-  }
-  
-  // Agregar secciones de contenido
-  if (extractedContent.sections && Array.isArray(extractedContent.sections)) {
-    console.log(`🔍 DEBUG - Processing ${extractedContent.sections.length} sections`);
-    
-    extractedContent.sections.forEach((section: any, index: number) => {
-      console.log(`🔍 DEBUG - Section ${index}:`, section);
-      
-      const newSection: WriteUpSection = {
-        id: uuidv4(),
-        type: section.type as SectionType,
-        title: section.title || `Sección ${index + 1}`,
-        content: section.content || 'Sin contenido',
-        screenshots: (section.screenshots || []).map((img: any) => ({
-          id: uuidv4(),
-          name: img.name,
-          dataUrl: img.dataUrl
-        })),
-        isTemplate: false,
-        ...(section.type === 'flag' && section.flags?.length > 0 && {
-          flagValue: section.flags[0]
-        }),
-        ...(section.type === 'pregunta' && section.answer && {
-          answer: section.answer
-        })
-      };
-      
-      console.log(`🔍 DEBUG - Created section:`, newSection);
-      newSections.push(newSection);
-    });
-  } else {
-    console.log('🔍 DEBUG - No sections found or sections is not an array');
-  }
-  
-  // Añadir imágenes no asociadas como secciones separadas
-  const unassociatedImages = extractedContent.images?.filter((img: any) => 
-    !newSections.some(section => 
-      section.screenshots.some(screenshot => screenshot.name === img.name)
-    )
-  ) || [];
-  
-  console.log(`🔍 DEBUG - Unassociated images: ${unassociatedImages.length}`);
-  
-  if (unassociatedImages.length > 0) {
-    const imageSection: WriteUpSection = {
-      id: uuidv4(),
-      type: 'paso',
-      title: method === 'AI' ? 'Imágenes Adicionales (IA)' : 'Imágenes Extraídas',
-      content: `Se extrajeron ${unassociatedImages.length} imágenes adicionales del PDF.`,
-      screenshots: unassociatedImages.map((img: any) => ({
-        id: uuidv4(),
-        name: img.name,
-        dataUrl: img.dataUrl
-      })),
-      isTemplate: false
-    };
-    
-    console.log(`🔍 DEBUG - Created image section:`, imageSection);
-    newSections.push(imageSection);
-  }
-  
-  console.log(`🔍 DEBUG - Total sections created: ${newSections.length}`);
-  console.log(`🔍 DEBUG - Final sections:`, newSections);
-  
-  return newSections;
-};
 
 export const AppLayout: React.FC = () => {
   const { state } = useWriteUp();

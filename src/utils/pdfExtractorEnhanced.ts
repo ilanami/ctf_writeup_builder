@@ -1,15 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { v4 as uuidv4 } from 'uuid';
 
-if (typeof window !== 'undefined' && pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
-  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    try {
-      const version = pdfjsLib.version || '4.4.168';
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.mjs`;
-    } catch (e) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
-    }
-  }
+// Configuración del worker - desactivado para mayor compatibilidad
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 }
 
 // Patrones para reconocer contenido de CTF (Bilingüe)
@@ -129,7 +123,12 @@ interface ExtractedContent {
 export const extractTextAndImagesWithPdfJSEnhanced = async (file: File): Promise<ExtractedContent> => {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      verbosity: 0
+    }).promise;
     
     let fullText = '';
     const images: Array<{ name: string; dataUrl: string }> = [];

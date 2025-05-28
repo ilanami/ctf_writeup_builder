@@ -37,12 +37,15 @@ export const ActiveSectionEditor: React.FC = () => {
   const [editableTitle, setEditableTitle] = useState('');
   const [editableContent, setEditableContent] = useState('');
 
+  const MAX_TITLE_LENGTH = 100;
+  const [titleError, setTitleError] = useState<string | null>(null);
+
   useEffect(() => {
     if (sectionToEdit) {
       const titleIsKey = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.');
       const contentIsKey = sectionToEdit.isTemplate && sectionToEdit.content?.startsWith('defaultSectionsContent.');
-      setEditableTitle(titleIsKey ? t(sectionToEdit.title as any) : sectionToEdit.title);
-      setEditableContent(contentIsKey ? t(sectionToEdit.content as any) : sectionToEdit.content);
+      setEditableTitle(titleIsKey ? t(sectionToEdit.title as any, {}) : sectionToEdit.title);
+      setEditableContent(contentIsKey ? t(sectionToEdit.content as any, {}) : sectionToEdit.content);
     } else {
       setEditableTitle('');
       setEditableContent('');
@@ -62,7 +65,7 @@ export const ActiveSectionEditor: React.FC = () => {
   }
   
   const displaySectionTitleInHeader = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
-    ? t(sectionToEdit.title as any)
+    ? t(sectionToEdit.title as any, {})
     : sectionToEdit.title;
 
 
@@ -90,8 +93,8 @@ export const ActiveSectionEditor: React.FC = () => {
       const newSection = {
         ...editingSuggestedSection,
         isTemplate: false,
-        title: editingSuggestedSection.title?.startsWith('defaultSections.') ? t(editingSuggestedSection.title as any) : editingSuggestedSection.title,
-        content: cleanContent,
+        title: field === 'title' ? valueToDispatch : editableTitle,
+        content: field === 'content' ? valueToDispatch : editableContent,
         [field]: valueToDispatch,
       };
       dispatch({ type: 'COMMIT_SUGGESTED_SECTION_EDIT', payload: newSection });
@@ -102,6 +105,15 @@ export const ActiveSectionEditor: React.FC = () => {
   };
 
   const handleAddScreenshot = (screenshot: Screenshot) => {
+    // No permitir si la sección es plantilla o no tiene título/contenido real
+    if (sectionToEdit.isTemplate || !sectionToEdit.title?.trim() || !sectionToEdit.content?.trim()) {
+      toast({
+        title: ta('editingSection', { title: displaySectionTitleInHeader || ta('untitledSection') }),
+        description: ta('untitledSection'),
+        variant: 'destructive'
+      });
+      return;
+    }
     dispatch({ type: 'ADD_SCREENSHOT_TO_SECTION', payload: { sectionId: sectionToEdit.id, screenshot } });
   };
 
@@ -111,7 +123,7 @@ export const ActiveSectionEditor: React.FC = () => {
 
   const handleGenerateWithAi = async () => {
     const titleForAi = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
-      ? t(sectionToEdit.title as any)
+      ? t(sectionToEdit.title as any, {})
       : sectionToEdit.title;
 
     if (!titleForAi || titleForAi.trim() === "") {
@@ -123,8 +135,16 @@ export const ActiveSectionEditor: React.FC = () => {
       return;
     }
 
-    const userApiKey = localStorage.getItem(USER_GOOGLE_AI_API_KEY_NAME);
-    if (!userApiKey) {
+    // Leer proveedor y clave desde localStorage
+    const provider = localStorage.getItem('aiProvider') || 'gemini';
+    let apiKey = '';
+    try {
+      const encrypted = localStorage.getItem('aiApiKey') || '';
+      apiKey = encrypted ? atob(encrypted) : '';
+    } catch {
+      apiKey = localStorage.getItem('aiApiKey') || '';
+    }
+    if (!apiKey) {
       toast({
         title: tai('apiKeyMissingTitle'),
         description: tai('apiKeyMissingDescription'),
@@ -136,51 +156,48 @@ export const ActiveSectionEditor: React.FC = () => {
     setIsGeneratingWithAi(true);
     setAiGeneratedSuggestion(null);
     try {
-      const genAI = new GoogleGenerativeAI(userApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Usamos gemini-1.5-flash, más rápido y económico
-
-      const generationConfig = {
-        temperature: 0.7,
-        topK: 1,
-        topP: 1,
-        maxOutputTokens: 2048,
-      };
-
-      const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      ];
-      
-      const promptText = `Eres un experto en ciberseguridad y Capture The Flag (CTF) y un redactor técnico.
-Tu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.
-
-Título de la Sección: ${titleForAi}
-Tipo de Sección: ${sectionToEdit.type}
-${aiPrompt ? `Foco/Palabras clave del usuario para esta sección: ${aiPrompt}` : ''}
-
-Basándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.
-- Si el tipo de sección es 'paso', describe acciones comunes, herramientas o comandos relevantes para el título y el prompt.
-- Si es 'pregunta', formula una pregunta relevante basada en el título/prompt y proporciona una respuesta común o de ejemplo.
-- Si es 'flag', describe cómo una flag podría encontrarse, formatearse típicamente, o qué podría representar en el contexto del título/prompt.
-- Si es 'notas', proporciona observaciones generales, consejos o puntos de investigación adicionales relacionados con el título/prompt.
-
-Usa Markdown de forma efectiva:
-- Emplea encabezados (ej. ## Sub-encabezado) si es apropiado para la estructura.
-- Usa bloques de código (ej. \`\`\`bash ... \`\`\`) para comandos o fragmentos de código.
-- Usa listas (con viñetas o numeradas) para pasos o ítems enumerados.
-- Enfatiza términos clave usando **negrita** o *cursiva*.
-
-Sé conciso pero informativo. Busca un punto de partida útil que el usuario pueda luego elaborar.
-
-Contenido Markdown Generado:
-`;
-
-      const result = await model.generateContent(promptText, {generationConfig, safetySettings});
-      const response = result.response;
-      const suggestion = response.text();
-      
+      let suggestion = '';
+      if (provider === 'gemini') {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const promptText = "Eres un experto en ciberseguridad y Capture The Flag (CTF) y un redactor técnico.\nTu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.\n\nTítulo de la Sección: " + titleForAi + "\nTipo de Sección: " + sectionToEdit.type + "\n" + (aiPrompt ? "Foco/Palabras clave del usuario para esta sección: " + aiPrompt : "") + "\n\nBasándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.\n- Si el tipo de sección es 'paso', describe acciones comunes, herramientas o comandos relevantes para el título y el prompt.\n- Si es 'pregunta', formula una pregunta relevante basada en el título/prompt y proporciona una respuesta común o de ejemplo.\n- Si es 'flag', describe cómo una flag podría encontrarse, formatearse típicamente, o qué podría representar en el contexto del título/prompt.\n- Si es 'notas', proporciona observaciones generales, consejos o puntos de investigación adicionales relacionados con el título/prompt.\n\nUsa Markdown de forma efectiva:\n- Emplea encabezados (ej. ## Sub-encabezado) si es apropiado para la estructura.\n- Usa bloques de código (ej. ```bash ... ```) para comandos o fragmentos de código.\n- Usa listas (con viñetas o numeradas) para pasos o ítems enumerados.\n- Enfatiza términos clave usando **negrita** o *cursiva*.\n\nSé conciso pero informativo. Busca un punto de partida útil que el usuario pueda luego elaborar.\n\nContenido Markdown Generado:\n";
+        const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: promptText }] }], generationConfig: { temperature: 0.7, topK: 1, topP: 1, maxOutputTokens: 2048 }, safetySettings: [ { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, ] });
+        const response = result.response;
+        suggestion = response.text();
+      } else if (provider === 'openai') {
+        // Llamada a OpenAI
+        const promptText = "Eres un experto en ciberseguridad y Capture The Flag (CTF) y un redactor técnico.\nTu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.\n\nTítulo de la Sección: " + titleForAi + "\nTipo de Sección: " + sectionToEdit.type + "\n" + (aiPrompt ? "Foco/Palabras clave del usuario para esta sección: " + aiPrompt : "") + "\n\nBasándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.\n- Si el tipo de sección es 'paso', describe acciones comunes, herramientas o comandos relevantes para el título y el prompt.\n- Si es 'pregunta', formula una pregunta relevante basada en el título/prompt y proporciona una respuesta común o de ejemplo.\n- Si es 'flag', describe cómo una flag podría encontrarse, formatearse típicamente, o qué podría representar en el contexto del título/prompt.\n- Si es 'notas', proporciona observaciones generales, consejos o puntos de investigación adicionales relacionados con el título/prompt.\n\nUsa Markdown de forma efectiva:\n- Emplea encabezados (ej. ## Sub-encabezado) si es apropiado para la estructura.\n- Usa bloques de código (ej. ```bash ... ```) para comandos o fragmentos de código.\n- Usa listas (con viñetas o numeradas) para pasos o ítems enumerados.\n- Enfatiza términos clave usando **negrita** o *cursiva*.\n\nSé conciso pero informativo. Busca un punto de partida útil que el usuario pueda luego elaborar.\n\nContenido Markdown Generado:\n";
+        const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              { role: 'system', content: 'Eres un experto en ciberseguridad y CTF. Responde en Markdown.' },
+              { role: 'user', content: promptText },
+            ],
+            max_tokens: 2048,
+            temperature: 0.7,
+          }),
+        });
+        if (!openaiRes.ok) {
+          let errorMsg = openaiRes.statusText;
+          try {
+            const errorJson = await openaiRes.json();
+            if (errorJson && errorJson.error && errorJson.error.message) {
+              errorMsg = errorJson.error.message;
+            }
+          } catch {}
+          throw new Error('Error al llamar a la API de OpenAI: ' + errorMsg);
+        }
+        const openaiData = await openaiRes.json();
+        suggestion = openaiData.choices?.[0]?.message?.content || '';
+      } else {
+        throw new Error('Proveedor de IA no soportado.');
+      }
       setAiGeneratedSuggestion(suggestion);
       toast({
         title: ta('suggestionGenerated'),
@@ -188,10 +205,20 @@ Contenido Markdown Generado:
       });
     } catch (error) {
       console.error("Error generating content with AI:", error);
-      const errorMessage = error instanceof Error ? error.message : tt('unknownError');
+      let errorMessage = '';
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        // fallback por si acaso
+        errorMessage = (error as any).message;
+      } else {
+        errorMessage = tt('unknownError');
+      }
       toast({
         title: ta('aiError'),
-        description: ta('aiErrorDetails', {errorMessage}),
+        description: ta('aiErrorDetails', { errorMessage }),
         variant: 'destructive',
       });
     } finally {
@@ -219,6 +246,34 @@ Contenido Markdown Generado:
 
   const currentScreenshots = sectionToEdit.screenshots || [];
 
+  const canAddScreenshot = () => {
+    if (sectionToEdit.isTemplate || !sectionToEdit.title?.trim() || !sectionToEdit.content?.trim()) {
+      toast({
+        title: ta('editingSection', { title: displaySectionTitleInHeader || ta('untitledSection') }),
+        description: ta('untitledSection'),
+        variant: 'destructive'
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleTitleChange = (value: string) => {
+    const trimmed = value.trimStart();
+    if (trimmed.length > MAX_TITLE_LENGTH) {
+      setTitleError(`El título no puede superar ${MAX_TITLE_LENGTH} caracteres.`);
+    } else if (trimmed.length === 0) {
+      setTitleError('El título no puede estar vacío.');
+    } else {
+      setTitleError(null);
+    }
+    setEditableTitle(trimmed);
+    // Solo despacha si es válido
+    if (trimmed.length > 0 && trimmed.length <= MAX_TITLE_LENGTH) {
+      handleSectionChange('title', trimmed);
+    }
+  };
+
   return (
     <Card className="h-full overflow-y-auto border-border">
       <CardHeader>
@@ -229,10 +284,17 @@ Contenido Markdown Generado:
           <Label htmlFor={`section-title-${sectionToEdit.id}`}>{ta('sectionTitle')}</Label>
           <Input
             id={`section-title-${sectionToEdit.id}`}
-            value={editableTitle} 
-            onChange={(e) => handleSectionChange('title', e.target.value)}
-            className="border-border focus:ring-foreground focus:border-foreground"
+            value={
+              sectionToEdit.title?.startsWith('sectionTypes.')
+                ? t(sectionToEdit.title as any, {})
+                : editableTitle
+            }
+            onChange={(e) => handleTitleChange(e.target.value)}
+            maxLength={MAX_TITLE_LENGTH + 1}
+            className={`border-border focus:ring-foreground focus:border-foreground ${titleError ? 'border-destructive' : ''}`}
+            readOnly={sectionToEdit.title?.startsWith('sectionTypes.')}
           />
+          {titleError && <p className="text-xs text-destructive mt-1">{titleError}</p>}
         </div>
 
         {sectionToEdit.type === 'pregunta' && (
@@ -263,7 +325,17 @@ Contenido Markdown Generado:
           <MarkdownEditor
             id={`section-content-${sectionToEdit.id}`}
             label={ta('contentMarkdown')}
-            value={editableContent} 
+            value={(() => {
+              // Detectar si es una de las 4 secciones base y el contenido es el valor por defecto
+              const isSectionType = sectionToEdit.title?.startsWith('sectionTypes.') && sectionToEdit.content?.startsWith('## sectionTypes.');
+              if (isSectionType) {
+                const typeKey = sectionToEdit.type;
+                const title = t(`sectionTypes.${typeKey}.label`);
+                const description = t(`sectionTypes.${typeKey}.description`);
+                return `## ${title}\n\n*${description}*\n`;
+              }
+              return editableContent;
+            })()}
             onChange={(value) => handleSectionChange('content', value)}
             rows={15}
           />
@@ -284,7 +356,7 @@ Contenido Markdown Generado:
               className="flex-grow border-border focus:ring-foreground focus:border-foreground"
             />
             <Button onClick={handleGenerateWithAi} disabled={isGeneratingWithAi || !(sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
-      ? t(sectionToEdit.title as any)
+      ? t(sectionToEdit.title as any, {})
       : sectionToEdit.title)?.trim()} className="whitespace-nowrap bg-foreground text-primary-foreground font-bold">
               {isGeneratingWithAi ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {ta('generating')}</>
@@ -321,7 +393,7 @@ Contenido Markdown Generado:
 
         <div>
           <Label>{ta('screenshots')}</Label>
-          <ImageUploader onImageUpload={handleAddScreenshot} label={ta('addScreenshot')} />
+          <ImageUploader onImageUpload={handleAddScreenshot} label={ta('addScreenshot')} canUpload={canAddScreenshot} />
           {currentScreenshots.length > 0 && (
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {currentScreenshots.map(ss => (

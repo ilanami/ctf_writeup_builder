@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ChangeEvent } from 'react';
@@ -21,6 +20,7 @@ interface ImageUploaderProps {
   className?: string;
   accept?: string;
   id?: string;
+  canUpload?: () => boolean;
 }
 
 const MAX_FILE_SIZE_MB = 5;
@@ -33,7 +33,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   label, // Label is passed as a prop, already translated by parent
   className,
   accept = "image/*",
-  id = "image-upload"
+  id = "image-upload",
+  canUpload
 }) => {
   const t = useI18n();
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     event.preventDefault();
     event.stopPropagation();
     setIsDragging(false);
+    if (canUpload && !canUpload()) return;
     const file = event.dataTransfer.files?.[0];
     if (file) {
       processFile(file);
@@ -94,6 +96,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   };
 
   const triggerFileInput = () => {
+    if (canUpload && !canUpload()) return;
     fileInputRef.current?.click();
   };
 
