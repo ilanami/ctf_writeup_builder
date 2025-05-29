@@ -1,12 +1,8 @@
-<p align="center">
-  <img src="docs/logo.png" alt="CTF Write-up Builder Logo" width="64" />
-</p>
-
 <p align="right">
   🇪🇸 <a href="./README.es.md">Leer en Español</a>
 </p>
 
-#   <img src="docs/logo.png" alt="CTF Write-up Builder Logo" width="64" />  CTF Write-up Builder
+#   <img src="docs/logo.png" alt="CTF Write-up Builder Logo" width="44" />  CTF Write-up Builder
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.0-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-18.0-blue?logo=react)](https://reactjs.org/)
