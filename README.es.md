@@ -232,8 +232,8 @@ git push origin feature/nueva-funcionalidad
 Si esta herramienta te ha sido útil y te ha ayudado en tus CTFs o certificaciones de ciberseguridad, considera apoyar el desarrollo con una donación. **No es obligatorio**, pero me ayudaría muchísimo a seguir creando herramientas como esta y a pagar las certificaciones de ciberseguridad que quiero obtener.
 
 ### 💝 Formas de Donar
-- 💳 **PayPal**: [Donar con PayPal](https://www.paypal.com/paypalme/1511amff) 
-- ☕ **Buy me a coffee**: [buymeacoffee.com/yourusername](https://buymeacoffee.com/ilanami) 
+- 💳 **PayPal**: ( https://www.paypal.com/paypalme/1511amff ) 
+- ☕ **Buy me a coffee**: ( https://buymeacoffee.com/ilanami ) 
 
 > 🙏 **¡Muchas gracias por tu apoyo!** Cada donación, por pequeña que sea, ayuda a mantener este proyecto y a desarrollar nuevas características.
 
