@@ -232,8 +232,8 @@ git push origin feature/new-functionality
 If this tool has been useful to you and has helped you in your CTFs or cybersecurity certifications, consider supporting development with a donation. **It's not mandatory**, but it would help me tremendously to continue creating tools like this and to pay for the cybersecurity certifications I want to obtain.
 
 ### 💝 Ways to Donate
-- 💳 **PayPal**: [Donate with PayPal] (https://www.paypal.com/paypalme/1511amff) *(Update with your real link)*
-- ☕ **Buy me a coffee**: (https://buymeacoffee.com/yourusername](https://buymeacoffee.com/ilanami) *(Update with your real link)*
+- 💳 **PayPal**: ( https://www.paypal.com/paypalme/1511amff ) 
+- ☕ **Buy me a coffee**: ( https://buymeacoffee.com/ilanami ) 
 
 > 🙏 **Thank you so much for your support!** Every donation, no matter how small, helps maintain this project and develop new features.
 
