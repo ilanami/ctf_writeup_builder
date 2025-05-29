@@ -1,12 +1,8 @@
-<p align="center">
-  <img src="docs/logo.png" alt="CTF Write-up Builder Logo" width="64" />
-</p>
-
 <p align="right">
   🇪🇸 <a href="./README.es.md">Leer en Español</a>
 </p>
 
-# 🏴‍☠️ CTF Write-up Builder
+#   <img src="docs/logo.png" alt="CTF Write-up Builder Logo" width="50" />  CTF Write-up Builder
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.0-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-18.0-blue?logo=react)](https://reactjs.org/)
@@ -236,8 +232,8 @@ git push origin feature/new-functionality
 If this tool has been useful to you and has helped you in your CTFs or cybersecurity certifications, consider supporting development with a donation. **It's not mandatory**, but it would help me tremendously to continue creating tools like this and to pay for the cybersecurity certifications I want to obtain.
 
 ### 💝 Ways to Donate
-- 💳 **PayPal**: [Donate with PayPal](https://paypal.me/yourusername) *(Update with your real link)*
-- ☕ **Buy me a coffee**: [buymeacoffee.com/yourusername](https://buymeacoffee.com/yourusername) *(Update with your real link)*
+- 💳 **PayPal**: ( https://www.paypal.com/paypalme/1511amff ) 
+- ☕ **Buy me a coffee**: ( https://buymeacoffee.com/ilanami ) 
 
 > 🙏 **Thank you so much for your support!** Every donation, no matter how small, helps maintain this project and develop new features.
 
