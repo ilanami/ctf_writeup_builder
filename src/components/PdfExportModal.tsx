@@ -30,7 +30,8 @@ import { marked } from 'marked';
 import { format, parseISO } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useScopedI18n, useCurrentLocale, I18nProviderClient } from '@/locales/client'; 
+import { useScopedI18n, useCurrentLocale, I18nProviderClient } from '@/locales/client';
+import DOMPurify from 'dompurify';
 
 // Define constants locally
 const PDF_FONT_SIZE_OPTIONS_KEYS = [
@@ -120,7 +121,7 @@ const PDF_THEMES_CONFIG: Record<PdfTheme, { nameKey: string; backgroundColor: st
 };
 
 const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, options, pdfStyles, currentLocale, tDifficulties, tOS, tPdfModal }) => {
-  const t = useScopedI18n();
+  const t = useScopedI18n('pdfModal');
   const sectionsToExport = writeUp.sections.filter(section => !section.isTemplate);
   const currentTheme = PDF_THEMES_CONFIG[options.theme] || PDF_THEMES_CONFIG.Hacker;
   const dateLocale = currentLocale === 'es' ? es : enUS;
@@ -161,7 +162,7 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
           box-sizing: border-box;
         }
       ` }} />
-      <div className="pdf-content-container" style={previewStyle}>
+      <div className="pdf-content-container" style={{ ...previewStyle, border: '3px solid #00ff00', boxShadow: 'none' }}>
         {/* Header con información general */}
         <div className="pdf-header-section">
           <h1 className="pdf-main-title" style={{ 
@@ -180,6 +181,17 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
             marginBottom: '12pt',
             textAlign: 'center'
           }}>
+            {writeUp.machineImage && (
+              <div style={{ margin: '0 0 6pt 0' }}>
+                <strong>{tPdfModal('machineImageLabel')}:</strong><br />
+                <img 
+                  src={writeUp.machineImage.dataUrl} 
+                  alt={tPdfModal('machineImageAlt')} 
+                  style={{ maxWidth: '180px', maxHeight: '180px', margin: '6pt auto', display: 'block', border: `1px solid ${currentTheme.borderColor}`, borderRadius: '6px' }}
+                />
+                <span style={{ fontSize: '8pt', color: currentTheme.textColor }}>{writeUp.machineImage.name}</span>
+              </div>
+            )}
             {writeUp.author && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('authorLabel')}:</strong> {writeUp.author}</p>}
             {writeUp.date && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('dateLabel')}:</strong> {format(parseISO(writeUp.date), "PPP", { locale: dateLocale })}</p>}
             {writeUp.difficulty && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('difficultyLabel')}:</strong> {tDifficulties(writeUp.difficulty as any)}</p>}
@@ -194,7 +206,9 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
             let sectionHtmlContent = '';
             if (typeof section.content === 'string') {
               try {
-                sectionHtmlContent = section.content ? marked.parse(section.content).toString() : `<p><em>${tPdfModal('noContent')}</em></p>`;
+                sectionHtmlContent = section.content
+                  ? DOMPurify.sanitize(marked.parse(section.content).toString())
+                  : `<p><em>${tPdfModal('noContent')}</em></p>`;
               } catch (e) {
                 console.error("Error parsing markdown for section:", section.title, e);
                 sectionHtmlContent = `<p><em>${tPdfModal('errorProcessingMarkdown')}</em></p>`;
@@ -322,7 +336,7 @@ export const PdfExportModal: React.FC = () => {
       /* Configuración de página - márgenes más compactos */
       @page {
         size: A4 portrait;
-        margin: 12mm 10mm 15mm 10mm; /* Reducidos de 18mm 15mm 20mm 15mm */
+        margin: 8mm 8mm 10mm 8mm; /* Más compactos para evitar saltos prematuros */
         background-color: ${currentThemeConfig.backgroundColor};
         
         /* Pie de página con numeración */
@@ -368,6 +382,8 @@ export const PdfExportModal: React.FC = () => {
         margin: 0 !important;
         border: none !important;
         box-shadow: none !important;
+        /* Reduce el min-height para evitar forzar página extra */
+        min-height: auto !important;
       }
 
       /* Secciones principales - más compactas */
@@ -642,7 +658,7 @@ export const PdfExportModal: React.FC = () => {
       console.error('PDF Export Error:', error);
       toast({ 
         title: tPdfModal('exportError'), 
-        description: tPdfModal('pdfExportFailed'), 
+        description: tPdfModal('pdfExportFailed', { errorMessage: '' }), 
         variant: "destructive", 
         duration: 9000 
       });
@@ -672,73 +688,97 @@ export const PdfExportModal: React.FC = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <FileSpreadsheet className="mr-1 h-4 w-4" /> 
-          Exportar PDF
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-2 border-[#00ff00] bg-black hover:bg-[#002200] shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider"
+          style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00', color: '#00ff00', fontWeight: 'bold' }}
+        >
+          <FileSpreadsheet className="mr-1 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+          {tPdfModal('exportButton')}
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 m-0 flex flex-col bg-background text-foreground border-foreground/30">
-        <DialogHeader className="px-4 py-3 border-b border-border flex flex-row justify-between items-center">
-          <DialogTitle className="text-lg font-bold text-foreground flex items-center">
-            <FileSpreadsheet size={20} className="mr-2" />
-            Exportar PDF
+      <DialogContent className="max-w-[950px] w-full h-[95vh] p-0 m-0 flex flex-col bg-background text-foreground border-green-500" style={{ borderWidth: 3, borderColor: '#00ff00', boxShadow: 'none' }}>
+        <DialogHeader className="px-4 py-3 flex flex-row justify-between items-center" style={{ borderBottom: 'none', borderTop: 'none' }}>
+          <DialogTitle className="text-lg font-bold flex items-center" style={{ color: '#00ff00' }}>
+            <FileSpreadsheet size={20} className="mr-2" style={{ color: '#00ff00' }} />
+            {tPdfModal('exportButton')}
           </DialogTitle>
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7"> 
-              <X size={18} /> 
-            </Button>
-          </DialogClose>
         </DialogHeader>
         
-        <div className="flex flex-1 overflow-hidden">
-          <aside className="w-[160px] min-w-[160px] p-2 border-r border-border overflow-y-auto bg-card text-card-foreground flex flex-col">
-            <div className="mb-3 w-full">
-              <h3 className="text-xs font-semibold text-foreground mb-2">
-                Tema
-              </h3>
-              <div className="flex flex-col gap-1 w-full">
-                <Button 
-                  variant={theme === 'Dark' ? 'default' : 'outline'} 
-                  className="w-full text-xs h-7" 
-                  onClick={() => setTheme('Dark')}
-                >
-                  Oscuro
-                </Button>
-                <Button 
-                  variant={theme === 'Light' ? 'default' : 'outline'} 
-                  className="w-full text-xs h-7" 
-                  onClick={() => setTheme('Light')}
-                >
-                  Claro
-                </Button>
-              </div>
+        <div className="flex flex-col flex-1 w-full h-full">
+          {/* Barra superior de controles */}
+          <div className="w-full flex flex-row items-center justify-between gap-4 px-6 py-4 border-b border-green-500 bg-black" style={{ borderTop: '3px solid #00ff00' }}>
+            <div className="flex flex-row items-center gap-4">
+              <span className="text-lg font-extrabold uppercase tracking-wider" style={{ color: '#00ff00', textShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>{tPdfModal('theme')}:</span>
+              <Button 
+                variant={theme === 'Dark' ? 'default' : 'outline'} 
+                className={
+                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 transition-all duration-150
+                  ${theme === 'Dark' ? 'bg-[#00ff00] text-black border-[#00ff00] shadow-[0_0_12px_#00ff00,0_0_2px_#00ff00]' : 'bg-black text-green-500 border-green-500 hover:bg-green-900 hover:text-black hover:border-[#00ff00]'}
+                  `
+                }
+                style={{ boxShadow: theme === 'Dark' ? '0 0 16px #00ff00, 0 0 2px #00ff00' : undefined }}
+                onClick={() => setTheme('Dark')}
+              >
+                {tPdfModal('Professional-Dark')}
+              </Button>
+              <Button 
+                variant={theme === 'Light' ? 'default' : 'outline'} 
+                className={
+                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 transition-all duration-150
+                  ${theme === 'Light' ? 'bg-[#00ff00] text-black border-[#00ff00] shadow-[0_0_12px_#00ff00,0_0_2px_#00ff00]' : 'bg-black text-green-500 border-green-500 hover:bg-green-900 hover:text-black hover:border-[#00ff00]'}
+                  `
+                }
+                style={{ boxShadow: theme === 'Light' ? '0 0 16px #00ff00, 0 0 2px #00ff00' : undefined }}
+                onClick={() => setTheme('Light')}
+              >
+                {tPdfModal('Professional-Light')}
+              </Button>
             </div>
-            
             <Button 
-              onClick={handleExport} 
-              disabled={isExporting} 
-              className="w-full font-bold h-8 text-xs"
+              onClick={handleExport}
+              disabled={isExporting}
+              variant="outline"
+              size="lg"
+              className={
+                theme === 'Light'
+                  ? 'h-12 px-8 text-lg font-extrabold uppercase tracking-wider border-2 border-[#007bff] text-white bg-[#007bff] hover:bg-white hover:text-[#007bff] shadow-[0_0_16px_#007bff,0_0_2px_#007bff] transition-all duration-150'
+                  : 'h-12 px-8 text-lg font-extrabold uppercase tracking-wider border-2 border-[#00ff00] text-black bg-[#00ff00] hover:bg-black hover:text-[#00ff00] shadow-[0_0_16px_#00ff00,0_0_2px_#00ff00] transition-all duration-150'
+              }
+              style={{ boxShadow: theme === 'Light' ? '0 0 16px #007bff, 0 0 2px #007bff' : '0 0 16px #00ff00, 0 0 2px #00ff00' }}
             > 
-              <Download className="mr-1 h-3 w-3" /> 
-              {isExporting ? 'Exporting...' : 'Export PDF'} 
+              <Download className="mr-2 h-6 w-6" /> 
+              {isExporting ? tPdfModal('exportingButton') : tPdfModal('exportButton')} 
             </Button>
-          </aside>
-          
-          <main className="flex-1 overflow-auto">
-            <div className="h-full w-full" style={{ 
-              transform: 'scale(0.7)', 
-              transformOrigin: 'top left',
-              width: '142.86%', // Compensa el scale(0.7) = 1/0.7 = 1.4286
-              height: '142.86%'
-            }}>
-              {isOpen && (
-                <div ref={exportContentRef} className="w-full">
-                  {pdfPreviewContent}
-                </div>
-              )}
-            </div>
-          </main>
+          </div>
+          {/* Preview centrado y ancho máximo */}
+          <div className="flex-1 flex justify-center items-start overflow-auto bg-neutral-900 py-8">
+            {isOpen && (
+              <div
+                ref={exportContentRef}
+                className="pdf-preview-a4"
+                style={{
+                  width: 850,
+                  minHeight: 1123,
+                  background: currentThemeConfig.backgroundColor,
+                  color: currentThemeConfig.textColor,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-start',
+                  alignItems: 'stretch',
+                  position: 'relative',
+                  margin: '0 auto',
+                  boxShadow: 'none',
+                  border: 'none',
+                  padding: '32px 36px 36px 36px'
+                }}
+              >
+                {pdfPreviewContent}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

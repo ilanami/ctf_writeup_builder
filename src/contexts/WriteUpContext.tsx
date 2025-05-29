@@ -17,7 +17,7 @@ interface WriteUpState {
 type WriteUpAction =
   | { type: 'LOAD_WRITEUP'; payload: WriteUp }
   | { type: 'UPDATE_GENERAL_INFO'; payload: Partial<WriteUp> }
-  | { type: 'ADD_SECTION'; payload: { type: SectionType; title?: string } }
+  | { type: 'ADD_SECTION'; payload: { type: SectionType; title?: string; content?: string; isTemplate?: boolean; t?: (key: string) => string } }
   | { type: 'ADD_PREBUILT_SECTION'; payload: WriteUpSection }
   | { type: 'ADD_IMPORTED_SECTIONS'; payload: WriteUpSection[] }
   | { type: 'UPDATE_SECTION'; payload: { id: string; data: Partial<WriteUpSection> } }
@@ -63,21 +63,40 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
         machineImage: action.payload.machineImage || undefined, 
         tags: action.payload.tags || [], 
       };
-      newState = { ...state, writeUp: loadedWriteUp, isDirty: false, activeSectionId: loadedWriteUp.sections.find(s => !s.isTemplate)?.[0]?.id || loadedWriteUp.sections[0]?.id || null };
+      newState = { ...state, writeUp: loadedWriteUp, isDirty: false, activeSectionId: (loadedWriteUp.sections.find(s => !s.isTemplate)?.id) || (loadedWriteUp.sections[0]?.id) || null };
       break;
     case 'UPDATE_GENERAL_INFO':
       newState = { ...state, writeUp: { ...state.writeUp, ...action.payload } };
       break;
     case 'ADD_SECTION':
-      const newSection = createDefaultSection(action.payload.type, action.payload.title);
-      newState = {
-        ...state,
-        writeUp: {
-          ...state.writeUp,
-          sections: [...state.writeUp.sections, newSection], 
-        },
-        activeSectionId: newSection.id, 
-      };
+      if (action.payload.isTemplate) {
+        const newSection = {
+          id: uuidv4(),
+          type: action.payload.type,
+          title: action.payload.title || '',
+          content: action.payload.content || '',
+          screenshots: [],
+          isTemplate: true,
+        };
+        newState = {
+          ...state,
+          writeUp: {
+            ...state.writeUp,
+            sections: [...state.writeUp.sections, newSection],
+          },
+          activeSectionId: newSection.id,
+        };
+      } else {
+        const newSection = createDefaultSection(action.payload.type, action.payload.title, action.payload.t);
+        newState = {
+          ...state,
+          writeUp: {
+            ...state.writeUp,
+            sections: [...state.writeUp.sections, newSection],
+          },
+          activeSectionId: newSection.id,
+        };
+      }
       break;
     case 'ADD_PREBUILT_SECTION':
       const prebuiltSectionWithNewId = sanitizeSection({ ...action.payload, id: uuidv4(), isTemplate: false });
@@ -131,7 +150,17 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
           sections: remainingSections,
         },
         activeSectionId: newActiveSectionId,
+        isDirty: true,
       };
+      // Guardado inmediato en localStorage para evitar que la sección reaparezca tras recargar
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+          ...state.writeUp,
+          sections: remainingSections,
+        }));
+      } catch (e) {
+        console.error('Error saving after DELETE_SECTION:', e);
+      }
       break;
     case 'REORDER_SECTIONS':
       newState = { ...state, writeUp: { ...state.writeUp, sections: action.payload.map(sanitizeSection) } };

@@ -6,36 +6,36 @@ const PROVIDERS = [
   { value: 'openai', label: 'OpenAI ChatGPT' },
 ];
 
-export default function ApiKeyConfigModal({ onSave, onCancel }) {
-  const [provider, setProvider] = useState('gemini');
-  const [apiKey, setApiKey] = useState('');
-  const [error, setError] = useState('');
+export default function ApiKeyConfigModal({ onSave, onCancel }: { onSave?: (data: { provider: string; apiKey: string }) => void; onCancel?: () => void }) {
+  const [provider, setProvider] = useState<string>('gemini');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [error, setError] = useState<string>('');
   const tai = useScopedI18n('aiConfig');
 
-  // Funciones de encriptación básica
-  const encryptApiKey = (key) => btoa(key);
-  const decryptApiKey = (encrypted) => {
+  // Funciones de codificación Base64 (NO es encriptación)
+  const encodeApiKey = (key: string): string => btoa(key);
+  const decodeApiKey = (encoded: string): string => {
     try {
-      return atob(encrypted);
+      return atob(encoded);
     } catch {
-      return encrypted; // Si no está encriptado
+      return encoded; // Si no está codificado en Base64
     }
   };
 
   // Cargar valores guardados
   useEffect(() => {
     const savedProvider = localStorage.getItem('aiProvider');
-    const savedEncryptedKey = localStorage.getItem('aiApiKey');
+    const savedEncodedKey = localStorage.getItem('aiApiKey');
     
     if (savedProvider) setProvider(savedProvider);
-    if (savedEncryptedKey) {
-      const decryptedKey = decryptApiKey(savedEncryptedKey);
-      setApiKey(decryptedKey);
+    if (savedEncodedKey) {
+      const decodedKey = decodeApiKey(savedEncodedKey);
+      setApiKey(decodedKey);
     }
   }, []);
 
   // Validar API Key
-  const validateApiKey = (key, providerType) => {
+  const validateApiKey = (key: string, providerType: string): string | null => {
     if (!key.trim()) {
       return tai('errorApiKeyEmpty');
     }
@@ -69,11 +69,21 @@ export default function ApiKeyConfigModal({ onSave, onCancel }) {
       setError(validationError);
       return;
     }
-    // Encriptar y guardar
-    const encryptedKey = encryptApiKey(apiKey);
+    // Codificar en Base64 y guardar (NO es encriptación)
+    const encodedKey = encodeApiKey(apiKey);
     localStorage.setItem('aiProvider', provider);
-    localStorage.setItem('aiApiKey', encryptedKey);
+    localStorage.setItem('aiApiKey', encodedKey);
     if (onSave) onSave({ provider, apiKey });
+  };
+
+  const handleDeleteApiKey = () => {
+    localStorage.removeItem('aiApiKey');
+    localStorage.removeItem('aiProvider');
+    setApiKey('');
+    setProvider('gemini');
+    setError('');
+    alert('API Key borrada correctamente.');
+    if (onSave) onSave({ provider: 'gemini', apiKey: '' });
   };
 
   return (
@@ -147,6 +157,9 @@ export default function ApiKeyConfigModal({ onSave, onCancel }) {
           <button onClick={handleSave} style={styles.saveButton}>
             {tai('saveKeyButton')}
           </button>
+          <button onClick={handleDeleteApiKey} style={{...styles.saveButton, backgroundColor: '#ff0033', color: '#fff', marginLeft: 8}}>
+            Borrar API Key
+          </button>
         </div>
       </div>
     </div>
@@ -156,7 +169,7 @@ export default function ApiKeyConfigModal({ onSave, onCancel }) {
 // Estilos manteniendo tu tema hacker
 const styles = {
   overlay: {
-    position: 'fixed',
+    position: 'fixed' as 'fixed',
     top: 0,
     left: 0,
     right: 0,
@@ -182,7 +195,7 @@ const styles = {
     fontSize: '18px',
     fontWeight: 'bold',
     marginBottom: '15px',
-    textAlign: 'left',
+    textAlign: 'left' as 'left',
   },
   providerSection: {
     marginBottom: '15px',
@@ -234,7 +247,7 @@ const styles = {
     fontFamily: 'monospace',
     fontSize: '14px',
     marginBottom: '8px',
-    boxSizing: 'border-box',
+    boxSizing: 'border-box' as 'border-box',
   },
   helpSection: {
     fontSize: '12px',
@@ -259,7 +272,7 @@ const styles = {
     color: '#00ff00',
     opacity: 0.8,
     marginBottom: '15px',
-    textAlign: 'center',
+    textAlign: 'center' as 'center',
   },
   buttonContainer: {
     display: 'flex',

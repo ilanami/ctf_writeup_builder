@@ -6,7 +6,7 @@ import type { WriteUpSection, Screenshot } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { MarkdownEditor } from './MarkdownEditor';
+import { WysiwygEditor } from './WysiwygEditor';
 import { ImageUploader } from './ImageUploader';
 import { Button } from '@/components/ui/button';
 import { Trash2, Loader2, ClipboardCopy, XCircle, Wand2 } from 'lucide-react';
@@ -27,6 +27,7 @@ export const ActiveSectionEditor: React.FC = () => {
   const ta = useScopedI18n('activeSectionEditor');
   const tt = useScopedI18n('toasts');
   const tai = useScopedI18n('aiConfig');
+  const tst = useScopedI18n('sectionTypes');
 
   const sectionToEdit = editingSuggestedSection || writeUp.sections.find(s => s.id === activeSectionId);
 
@@ -42,31 +43,77 @@ export const ActiveSectionEditor: React.FC = () => {
 
   useEffect(() => {
     if (sectionToEdit) {
-      const titleIsKey = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.');
-      const contentIsKey = sectionToEdit.isTemplate && sectionToEdit.content?.startsWith('defaultSectionsContent.');
-      setEditableTitle(titleIsKey ? t(sectionToEdit.title as any, {}) : sectionToEdit.title);
-      setEditableContent(contentIsKey ? t(sectionToEdit.content as any, {}) : sectionToEdit.content);
+      if (sectionToEdit.isTemplate) {
+        // Sugerida: traducir la clave content
+        setEditableTitle(t(sectionToEdit.title as any, {}));
+        setEditableContent(t(sectionToEdit.content as any, {}));
+      } else if (sectionToEdit.title?.startsWith('sectionTypes.')) {
+        // Base: ejemplo/descripcion traducida
+        const examples = {
+          paso: (tst as any)['paso.example'],
+          pregunta: (tst as any)['pregunta.example'],
+          flag: (tst as any)['flag.example'],
+          notas: (tst as any)['notas.example'],
+        };
+        const example = examples[sectionToEdit.type];
+        if (example && !example.startsWith(sectionToEdit.type)) {
+          setEditableContent(example);
+        } else {
+          const titles = {
+            paso: t('sectionTypes.paso.label'),
+            pregunta: t('sectionTypes.pregunta.label'),
+            flag: t('sectionTypes.flag.label'),
+            notas: t('sectionTypes.notas.label'),
+          };
+          const descriptions = {
+            paso: (tst as any)['paso.description'],
+            pregunta: (tst as any)['pregunta.description'],
+            flag: (tst as any)['flag.description'],
+            notas: (tst as any)['notas.description'],
+          };
+          const title = titles[sectionToEdit.type] || '';
+          const description = descriptions[sectionToEdit.type] || '';
+          setEditableContent(`<h2>${title}</h2><p><em>${description}</em></p>`);
+        }
+        setEditableTitle(t(sectionToEdit.title as any, {}));
+      } else {
+        // Personalizada
+        setEditableTitle(sectionToEdit.title);
+        setEditableContent(sectionToEdit.content);
+      }
     } else {
       setEditableTitle('');
       setEditableContent('');
     }
-  }, [sectionToEdit, t, activeSectionId, editingSuggestedSection]);
+  }, [sectionToEdit, t, tst, activeSectionId, editingSuggestedSection]);
 
 
   if (!sectionToEdit) {
     return (
-      <Card className="h-full flex items-center justify-center border-dashed border-border">
-        <CardContent className="text-center text-muted-foreground">
-          <p className="text-lg">{ta('selectSectionToEdit')}</p>
-          <p className="text-sm">{ta('orCreateNew')}</p>
+      <Card className="h-full flex items-center justify-center border-dashed border-border bg-transparent">
+        <CardContent className="w-full flex flex-col items-center justify-center">
+          <span
+            style={{
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              color: '#00ff00',
+              textAlign: 'center',
+              background: 'none',
+              letterSpacing: '0.5px',
+              textShadow: '0 0 8px #00ff00',
+              padding: '0.5em 0',
+              fontFamily: 'monospace, Fira Code, Consolas, Courier New',
+              display: 'block',
+            }}
+          >
+            {ta('selectSectionToEdit')}<br />{ta('orCreateNew')}
+          </span>
         </CardContent>
       </Card>
     );
   }
   
-  const displaySectionTitleInHeader = sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
-    ? t(sectionToEdit.title as any, {})
-    : sectionToEdit.title;
+  const displaySectionTitleInHeader = editableTitle;
 
 
   const handleSectionChange = (field: keyof WriteUpSection, value: any) => {
@@ -284,16 +331,37 @@ export const ActiveSectionEditor: React.FC = () => {
           <Label htmlFor={`section-title-${sectionToEdit.id}`}>{ta('sectionTitle')}</Label>
           <Input
             id={`section-title-${sectionToEdit.id}`}
-            value={
-              sectionToEdit.title?.startsWith('sectionTypes.')
-                ? t(sectionToEdit.title as any, {})
-                : editableTitle
-            }
+            value={editableTitle}
             onChange={(e) => handleTitleChange(e.target.value)}
             maxLength={MAX_TITLE_LENGTH + 1}
             className={`border-border focus:ring-foreground focus:border-foreground ${titleError ? 'border-destructive' : ''}`}
-            readOnly={sectionToEdit.title?.startsWith('sectionTypes.')}
+            readOnly={false}
           />
+          {sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('sectionTypes.') && (
+            <div className="text-xs text-muted-foreground mt-1">
+              <div>{(() => {
+                const descriptions = {
+                  paso: (tst as any)['paso.description'],
+                  pregunta: (tst as any)['pregunta.description'],
+                  flag: (tst as any)['flag.description'],
+                  notas: (tst as any)['notas.description'],
+                };
+                return descriptions[sectionToEdit.type] || '';
+              })()}</div>
+              {(() => {
+                const examples = {
+                  paso: (tst as any)['paso.example'],
+                  pregunta: (tst as any)['pregunta.example'],
+                  flag: (tst as any)['flag.example'],
+                  notas: (tst as any)['notas.example'],
+                };
+                const example = examples[sectionToEdit.type];
+                return example && !example.startsWith(sectionToEdit.type) ? (
+                  <div className="mt-1"><b>Ejemplo:</b> {example}</div>
+                ) : null;
+              })()}
+            </div>
+          )}
           {titleError && <p className="text-xs text-destructive mt-1">{titleError}</p>}
         </div>
 
@@ -322,22 +390,11 @@ export const ActiveSectionEditor: React.FC = () => {
         )}
         
         <div>
-          <MarkdownEditor
+          <WysiwygEditor
             id={`section-content-${sectionToEdit.id}`}
             label={ta('contentMarkdown')}
-            value={(() => {
-              // Detectar si es una de las 4 secciones base y el contenido es el valor por defecto
-              const isSectionType = sectionToEdit.title?.startsWith('sectionTypes.') && sectionToEdit.content?.startsWith('## sectionTypes.');
-              if (isSectionType) {
-                const typeKey = sectionToEdit.type;
-                const title = t(`sectionTypes.${typeKey}.label`);
-                const description = t(`sectionTypes.${typeKey}.description`);
-                return `## ${title}\n\n*${description}*\n`;
-              }
-              return editableContent;
-            })()}
+            value={editableContent}
             onChange={(value) => handleSectionChange('content', value)}
-            rows={15}
           />
         </div>
         
@@ -355,13 +412,18 @@ export const ActiveSectionEditor: React.FC = () => {
               disabled={isGeneratingWithAi}
               className="flex-grow border-border focus:ring-foreground focus:border-foreground"
             />
-            <Button onClick={handleGenerateWithAi} disabled={isGeneratingWithAi || !(sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
-      ? t(sectionToEdit.title as any, {})
-      : sectionToEdit.title)?.trim()} className="whitespace-nowrap bg-foreground text-primary-foreground font-bold">
+            <Button
+              onClick={handleGenerateWithAi}
+              disabled={isGeneratingWithAi || !(sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
+                ? t(sectionToEdit.title as any, {})
+                : sectionToEdit.title)?.trim()}
+              className="whitespace-nowrap border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00eaff] hover:text-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-8 px-2 text-[0.95rem] flex items-center justify-center"
+              style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}
+            >
               {isGeneratingWithAi ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {ta('generating')}</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" style={{ color: '#00ff00' }} /> {ta('generating')}</>
               ) : (
-                <>✨ {ta('generateWithAI')}</>
+                <><Wand2 className="mr-2 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {ta('generateWithAI')}</>
               )}
             </Button>
           </div>
@@ -372,11 +434,23 @@ export const ActiveSectionEditor: React.FC = () => {
             <div className="flex justify-between items-center">
               <Label htmlFor={`ai-suggestion-${sectionToEdit.id}`} className="text-foreground font-medium">{ta('aiSuggestion')}</Label>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopyAiSuggestion} className="text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
-                  <ClipboardCopy className="mr-2 h-4 w-4" /> {ta('copySuggestion')}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyAiSuggestion}
+                  className="border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00eaff] hover:text-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-8 px-2 text-[0.95rem] flex items-center"
+                  style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}
+                >
+                  <ClipboardCopy className="mr-2 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {ta('copySuggestion')}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleClearAiSuggestion} className="text-destructive hover:text-destructive-foreground hover:bg-destructive/90 border-destructive hover:border-destructive">
-                  <XCircle className="mr-2 h-4 w-4" /> {ta('deleteSuggestion')}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearAiSuggestion}
+                  className="border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00eaff] hover:text-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-8 px-2 text-[0.95rem] flex items-center"
+                  style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}
+                >
+                  <XCircle className="mr-2 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {ta('deleteSuggestion')}
                 </Button>
               </div>
             </div>

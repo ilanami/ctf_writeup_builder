@@ -73,3 +73,8 @@
   animation: blink-animation 1s steps(2, start) infinite;
   font-weight: bold;
 }
+
+.text-center-green {
+  color: #00ff00 !important;
+  text-align: center;
+}

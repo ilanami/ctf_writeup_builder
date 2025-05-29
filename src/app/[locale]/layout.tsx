@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
   params: { locale },
 }: Readonly<{
@@ -28,7 +28,7 @@ export default function RootLayout({
           <script dangerouslySetInnerHTML={{__html: `
             let visible = true;
             setInterval(() => {
-              document.title = visible ? 'CTF Write-up Builder >_' : 'CTF Write-up Builder  ';
+              document.title = visible ? 'CTF Write-up Builder >_' : 'CTF Write-up Builder > ';
               visible = !visible;
             }, 500);
           `}} />

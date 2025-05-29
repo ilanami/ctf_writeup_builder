@@ -1,4 +1,3 @@
-
 import type { WriteUp, WriteUpSection, Difficulty, OperatingSystem, SectionType, PdfExportOptions, PdfTheme, PageSize, PageOrientation } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { FileText, Flag, HelpCircle, PlaySquare, ListChecks, Users, Server, Brain, FileType as NotesIcon } from 'lucide-react';
@@ -14,14 +13,15 @@ export interface SectionTypeUIDefinition {
   defaultContent?: string;
 }
 
-export const createDefaultSection = (type: SectionType = 'paso', title?: string): WriteUpSection => {
-  const defaultTitle = title || `sectionTypes.${type}.label`;
-
+export const createDefaultSection = (type: SectionType = 'paso', title?: string, t?: (key: string) => string): WriteUpSection => {
+  const key = `sectionTypes.${type}.label`;
+  const defaultTitle = title || (t ? t(key) : key);
+  const exampleKey = `sectionTypes.${type}.example`;
   return {
     id: uuidv4(),
     type,
     title: defaultTitle,
-    content: `## ${defaultTitle}\n\nContenido de la sección...`,
+    content: t ? t(exampleKey) : `## ${defaultTitle}\n\nContenido de la sección...`,
     screenshots: [],
     isTemplate: false,
   };
