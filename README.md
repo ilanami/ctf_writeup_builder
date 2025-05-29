@@ -20,7 +20,7 @@ Designed by and for the cybersecurity community, CTF Write-up Builder allows you
 
 ## 🌐 Live Demo
 
-**[🚀 Try the application here](https://ctf-writeup-builder.vercel.app)**
+**[🚀 Try the application here](https://ctf-writeup-builder.vercel.app/)**
 
 *No registration, no tracking, no limits. Your privacy is our priority.*
 

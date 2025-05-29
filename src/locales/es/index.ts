@@ -85,10 +85,10 @@ export default {
     editSectionFirstDesc: "Debes editar la sección (título y contenido) antes de poder añadir capturas de pantalla.",
   },
   sectionTypes: {
-    paso: { label: 'Paso', description: 'Describe un paso del proceso.' },
-    pregunta: { label: 'Pregunta', description: 'Formula una pregunta y su respuesta.' },
-    flag: { label: 'Flag', description: 'Registra una flag encontrada.' },
-    notas: { label: 'Notas', description: 'Añade notas o comentarios generales.' },
+    paso: { label: 'Paso', description: 'Describe un paso del proceso.', example: '## Ejemplo de Paso\n\nDescribe las acciones, herramientas o comandos utilizados en este paso.' },
+    pregunta: { label: 'Pregunta', description: 'Formula una pregunta y su respuesta.', example: '## Ejemplo de Pregunta\n\n¿Cuál es la vulnerabilidad principal?\n\n**Respuesta:** La vulnerabilidad principal es ...' },
+    flag: { label: 'Flag', description: 'Registra una flag encontrada.', example: '## Ejemplo de Flag\n\nFlag encontrada: `HTB{flag_de_ejemplo}`' },
+    notas: { label: 'Notas', description: 'Añade notas o comentarios generales.', example: '## Ejemplo de Notas\n\nAgrega tus observaciones, consejos o puntos de investigación aquí.' },
   },
   difficulties: {
     Fácil: 'Fácil',

@@ -506,7 +506,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   const t = useI18n();
 
   const handleAddSection = (type: SectionType) => {
-    const tempSection = createDefaultSection(type);
+    const tempSection = createDefaultSection(type, undefined, t);
     dispatch({ type: 'SET_EDITING_SUGGESTED_SECTION', payload: { ...tempSection, isTemplate: true } });
   };
 

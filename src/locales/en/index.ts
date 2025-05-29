@@ -83,10 +83,10 @@ export default {
     couldNotCopySuggestion: 'Could not copy suggestion.',
   },
   sectionTypes: {
-    paso: { label: 'Step', description: 'Describe a step in the process.' },
-    pregunta: { label: 'Question', description: 'Formulate a question and its answer.' },
-    flag: { label: 'Flag', description: 'Record a found flag.' },
-    notas: { label: 'Notes', description: 'Add general notes or comments.' },
+    paso: { label: 'Step', description: 'Describe a step in the process.', example: '## Step Example\n\nDescribe the actions, tools, or commands used in this step.' },
+    pregunta: { label: 'Question', description: 'Formulate a question and its answer.', example: '## Example Question\n\nWhat is the main vulnerability?\n\n**Answer:** The main vulnerability is ...' },
+    flag: { label: 'Flag', description: 'Record a found flag.', example: '## Flag Example\n\nFlag found: `HTB{example_flag}`' },
+    notas: { label: 'Notes', description: 'Add general notes or comments.', example: '## Notes Example\n\nAdd your observations, tips, or further research points here.' },
   },
   difficulties: {
     Fácil: 'Easy',
