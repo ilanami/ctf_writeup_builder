@@ -251,9 +251,34 @@ Para consultas generales, colaboraciones o propuestas:
 
 Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para detalles.
 
-```
-MIT License - Puedes usar, modificar y distribuir libremente
-```
+## ⚠️ Nota sobre Content Security Policy (CSP) y 'unsafe-eval'
+
+Para que todas las funciones de la aplicación funcionen correctamente en modo desarrollo, la política de seguridad de contenido (CSP) permite 'unsafe-eval' **solo en desarrollo**. Esto es necesario porque algunas dependencias lo requieren para funcionar localmente.
+
+**En producción** (por ejemplo, en Vercel), la configuración de CSP **no incluye** 'unsafe-eval', por lo que la aplicación es segura y cumple con los estándares de seguridad de la plataforma.
+
+**No modifiques la política CSP para permitir 'unsafe-eval' en producción.**
+La configuración actual ya gestiona esto automáticamente según el entorno.
+
+#### Si tienes problemas con botones o funciones que no responden en desarrollo:
+
+1. Abre el archivo `next.config.mjs` en la raíz del proyecto.
+2. Asegúrate de que la línea de la política CSP esté así:
+   ```js
+   {
+     key: 'Content-Security-Policy',
+     value: process.env.NODE_ENV === 'development'
+       ? "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self';"
+       : "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self';"
+   },
+   ```
+3. Guarda el archivo y reinicia el servidor de desarrollo con:
+   ```bash
+   npm run dev
+   ```
+4. Recarga la página en el navegador con `Ctrl + F5`.
+
+**En producción, 'unsafe-eval' NO está permitido y la aplicación es segura.**
 
 ## 🙏 Agradecimientos
 
