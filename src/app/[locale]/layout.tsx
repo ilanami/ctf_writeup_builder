@@ -25,13 +25,7 @@ export default async function RootLayout({
     <I18nProviderClient locale={locale} key={locale}>
       <html lang={locale}>
         <head>
-          <script dangerouslySetInnerHTML={{__html: `
-            let visible = true;
-            setInterval(() => {
-              document.title = visible ? 'CTF Write-up Builder >_' : 'CTF Write-up Builder > ';
-              visible = !visible;
-            }, 500);
-          `}} />
+          {/* Eliminado script inline para máxima seguridad CSP */}
         </head>
         <body className={`${GeistSans.variable} ${GeistMono.variable} font-mono antialiased`}>
           {children}
