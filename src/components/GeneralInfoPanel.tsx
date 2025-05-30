@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -88,7 +87,13 @@ export const GeneralInfoPanel: React.FC = () => {
                 className="w-full justify-start text-left font-normal"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {writeUp.date ? format(parseISO(writeUp.date), "PPP", { locale: dateLocale }) : <span>{t('selectDate')}</span>}
+                {writeUp.date ? (() => {
+                  try {
+                    return format(parseISO(writeUp.date), "PPP", { locale: dateLocale });
+                  } catch {
+                    return writeUp.date;
+                  }
+                })() : <span>{t('selectDate')}</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 bg-background border-border" align="start">

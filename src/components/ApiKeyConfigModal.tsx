@@ -77,12 +77,17 @@ export default function ApiKeyConfigModal({ onSave, onCancel }: { onSave?: (data
   };
 
   const handleDeleteApiKey = () => {
+    const savedEncodedKey = localStorage.getItem('aiApiKey');
+    if (!savedEncodedKey) {
+      alert(tai('apiKeyEmptyTitle'));
+      return;
+    }
     localStorage.removeItem('aiApiKey');
     localStorage.removeItem('aiProvider');
     setApiKey('');
     setProvider('gemini');
     setError('');
-    alert('API Key borrada correctamente.');
+    alert(tai('apiKeyDeletedTitle'));
     if (onSave) onSave({ provider: 'gemini', apiKey: '' });
   };
 
@@ -158,7 +163,7 @@ export default function ApiKeyConfigModal({ onSave, onCancel }: { onSave?: (data
             {tai('saveKeyButton')}
           </button>
           <button onClick={handleDeleteApiKey} style={{...styles.saveButton, backgroundColor: '#ff0033', color: '#fff', marginLeft: 8}}>
-            Borrar API Key
+            {tai('deleteApiKeyButton')}
           </button>
         </div>
       </div>

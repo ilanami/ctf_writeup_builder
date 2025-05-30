@@ -289,37 +289,195 @@ const AppHeader: React.FC = () => {
           if (typeof markdownContent !== 'string') {
             throw new Error("El contenido del archivo Markdown no es válido.");
           }
-          
-          let sectionTitle = file.name.replace(/\.md$/i, '') || tt('mdImportDefaultTitle');
-          const h1Match = markdownContent.match(/^#\s+(.*)/m);
-          if (h1Match && h1Match[1]) {
-             sectionTitle = h1Match[1].trim();
+
+          // Parse the markdown content
+          const lines = markdownContent.split('\n');
+          let currentSection: WriteUpSection | null = null;
+          const sections: WriteUpSection[] = [];
+          let writeUpTitle = '';
+          let writeUpAuthor = '';
+          let writeUpDate = '';
+          let writeUpDifficulty = '';
+          let writeUpOS = '';
+          let writeUpTags: string[] = [];
+          let machineImage: { name: string; dataUrl: string } | null = null;
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+
+            // Parse header information
+            if (i === 0 && line.startsWith('# ')) {
+              writeUpTitle = line.substring(2).trim();
+              continue;
+            }
+
+            // Parse metadata (author, date, difficulty, os, tags)
+            if (line.startsWith('**')) {
+              const metaMatch = line.match(/^\*\*(.+?):\*\*\s*(.+)$/i);
+              if (metaMatch) {
+                const cleanKey = metaMatch[1].replace(/\*/g, '').trim().toLowerCase();
+                const cleanValue = metaMatch[2].replace(/\*/g, '').trim();
+                switch (cleanKey) {
+                  case 'author':
+                  case 'autor':
+                    writeUpAuthor = cleanValue;
+                    break;
+                  case 'date':
+                  case 'fecha': {
+                    // Intentar convertir a ISO
+                    let isoDate = cleanValue;
+                    // Si es formato DD/MM/YYYY o DD-MM-YYYY
+                    const matchDMY = cleanValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+                    if (matchDMY) {
+                      isoDate = `${matchDMY[3]}-${matchDMY[2].padStart(2, '0')}-${matchDMY[1].padStart(2, '0')}`;
+                    } else {
+                      // Si es formato MM/DD/YYYY
+                      const matchMDY = cleanValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+                      if (matchMDY) {
+                        isoDate = `${matchMDY[3]}-${matchMDY[1].padStart(2, '0')}-${matchMDY[2].padStart(2, '0')}`;
+                      }
+                    }
+                    writeUpDate = isoDate;
+                    break;
+                  }
+                  case 'difficulty':
+                  case 'dificultad':
+                    writeUpDifficulty = cleanValue;
+                    break;
+                  case 'os':
+                  case 's.o.':
+                  case 'operating system':
+                  case 'sistema operativo':
+                    writeUpOS = cleanValue;
+                    break;
+                  case 'tags':
+                    writeUpTags = cleanValue.split(',').map(tag => tag.trim());
+                    break;
+                }
+                continue;
+              }
+            }
+
+            // Parse machine image section (do NOT create a section, assign to machineImage)
+            if (line.match(/^##\s*(Machine Image|Imagen de la Máquina)/i)) {
+              // Look ahead for image markdown
+              let foundImage = false;
+              for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+                const imgLine = lines[j].trim();
+                const match = imgLine.match(/!\[(.*?)\]\((.*?)\)/);
+                if (match) {
+                  machineImage = {
+                    name: match[1],
+                    dataUrl: match[2]
+                  };
+                  foundImage = true;
+                  break;
+                }
+                // Si hay otra sección antes de la imagen, salir
+                if (imgLine.startsWith('## ')) break;
+              }
+              // Saltar las siguientes líneas si se encontró imagen
+              if (foundImage) {
+                i += 1; // Avanzar al menos una línea
+              }
+              continue;
+            }
+
+            // Parse sections (ignorar Machine Image)
+            if (line.startsWith('## ') && !line.match(/^##\s*(Machine Image|Imagen de la Máquina)/i)) {
+              if (currentSection) {
+                sections.push(currentSection);
+              }
+              currentSection = {
+                id: uuidv4(),
+                type: 'notas',
+                title: line.substring(3).trim(),
+                content: '',
+                screenshots: [],
+                isTemplate: false
+              };
+              continue;
+            }
+
+            // Parse answer or flag value
+            if (currentSection && line.startsWith('> **')) {
+              const [key, value] = line.split(':**').map(s => s.trim());
+              const cleanKey = key.replace('> **', '').toLowerCase();
+              const cleanValue = value.replace('**', '').trim();
+
+              if (cleanKey.includes('answer') || cleanKey.includes('respuesta')) {
+                currentSection.type = 'pregunta';
+                currentSection.answer = cleanValue;
+              } else if (cleanKey.includes('flag')) {
+                currentSection.type = 'flag';
+                currentSection.flagValue = cleanValue.replace(/`/g, '');
+              }
+              continue;
+            }
+
+            // Parse screenshots
+            if (currentSection && line.startsWith('![')) {
+              const match = line.match(/!\[(.*?)\]\((.*?)\)/);
+              if (match) {
+                currentSection.screenshots.push({
+                  id: uuidv4(),
+                  name: match[1],
+                  dataUrl: match[2]
+                });
+              }
+              continue;
+            }
+
+            // Add content to current section
+            if (currentSection) {
+              currentSection.content += line + '\n';
+            }
           }
 
-          const newSection: WriteUpSection = {
-            id: uuidv4(), 
-            type: 'notas', 
-            title: sectionTitle,
-            content: markdownContent,
-            screenshots: [],
-            isTemplate: false, 
+          // Add the last section
+          if (currentSection) {
+            sections.push(currentSection);
+          }
+
+          // Create the write-up object
+          const importedWriteUp = {
+            title: writeUpTitle || tt('mdImportDefaultTitle'),
+            author: writeUpAuthor,
+            date: writeUpDate,
+            difficulty: writeUpDifficulty,
+            os: writeUpOS,
+            tags: writeUpTags,
+            machineImage: machineImage,
+            sections: sections
           };
-          
-          dispatch({ type: 'ADD_PREBUILT_SECTION', payload: newSection });
-          toast({ title: tt('success'), description: tt('mdSectionImported', {sectionTitle}) });
+
+          // Update the state with the imported write-up
+          dispatch({ type: 'LOAD_WRITEUP', payload: importedWriteUp });
+          toast({ 
+            title: tt('success'), 
+            description: tt('mdSectionImported', { sectionTitle: writeUpTitle }) 
+          });
 
         } catch (error) {
           console.error("Error importing Markdown:", error);
           const errorMessage = error instanceof Error ? error.message : "No se pudo procesar el archivo Markdown.";
-          toast({ title: tt('mdImportError'), description: errorMessage, variant: "destructive" });
+          toast({ 
+            title: tt('mdImportError'), 
+            description: errorMessage, 
+            variant: "destructive" 
+          });
         }
       };
       reader.onerror = () => {
-        toast({ title: tt('error'), description: "No se pudo leer el archivo Markdown seleccionado.", variant: "destructive" });
+        toast({ 
+          title: tt('error'), 
+          description: "No se pudo leer el archivo Markdown seleccionado.", 
+          variant: "destructive" 
+        });
       };
       reader.readAsText(file);
     }
-    if (event.target) event.target.value = ''; 
+    if (event.target) event.target.value = '';
   };
   
   const handleExportJsonBackup = () => { 

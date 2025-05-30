@@ -294,6 +294,7 @@ export default {
     securityNote: "🔒 Tu API Key se almacena localmente codificada en Base64 (NO cifrado seguro). Nunca compartimos tus credenciales.",
     cancelButton: "Cancelar",
     saveKeyButton: "Guardar Clave",
+    deleteApiKeyButton: "Borrar API Key",
     errorApiKeyEmpty: "Por favor, introduce una API Key válida.",
     errorOpenAIPrefix: "Las API Keys de OpenAI empiezan con 'sk-'.",
     errorApiKeyTooShort: "La API Key parece demasiado corta.",

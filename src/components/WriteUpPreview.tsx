@@ -86,7 +86,13 @@ export const WriteUpPreview: React.FC = () => {
         <CardHeader className="border-b border-border">
           <CardTitle className="text-3xl text-foreground font-bold">{writeUpTitle}</CardTitle>
           <CardDescription className="text-muted-foreground">
-            {tg('author')}: {writeUpAuthor} | {tg('date')}: {writeUp.date ? format(parseISO(writeUp.date), "PPP", { locale: dateLocale }) : t('generalInfo.selectDate')}
+            {tg('author')}: {writeUpAuthor} | {tg('date')}: {writeUp.date ? (() => {
+              try {
+                return format(parseISO(writeUp.date), "PPP", { locale: dateLocale });
+              } catch {
+                return writeUp.date;
+              }
+            })() : t('generalInfo.selectDate')}
           </CardDescription>
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant="secondary">{tg('difficulty')}: {difficultyDisplay}</Badge>
