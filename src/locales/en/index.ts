@@ -15,7 +15,7 @@ export default {
     selectOS: 'Select O.S.',
     machineImage: 'Machine Image',
     addImage: 'Add image',
-    writeupTitlePlaceholder: "E.g. 'Kioptrix Level 1 Analysis'",
+    writeupTitlePlaceholder: "E.g. Write-up for machine Blue",
     authorPlaceholder: "Your name or alias",
     defaultWriteupTitle: "New Write-up", // Key for default title
     defaultAuthor: "Anonymous", // Key for default author
@@ -62,7 +62,7 @@ export default {
     flagValue: 'Flag Value',
     contentMarkdown: 'Content (Markdown)',
     aiAssistant: 'AI Assistant',
-    aiPromptPlaceholder: 'E.g., \'Vulnerability analysis with Nessus\'',
+    aiPromptPlaceholder: "E.g., 'Help me with the Nmap commands to scan this IP 192.168.0.00'",
     generateWithAI: 'Generate with AI',
     generating: 'Generating...',
     aiSuggestion: 'AI Suggestion:',
@@ -153,6 +153,7 @@ export default {
     errorSavingProgress: "Error Saving",
     couldNotSaveProgress: "Could not save progress.",
     gistNotImplemented: "Gist export is not yet implemented.",
+    pdfExportStarted: "PDF export started. The print dialog will open. Complete the process to save or print your PDF.",
   },
    pdfModal: {
     title: "PDF Exporter for CTF Write-ups",
@@ -366,6 +367,19 @@ export default {
     contactDesc: 'Contact directly for personalized support',
     expandAll: 'Expand All',
     communityHelp: 'CTF Community Help',
+  },
+  importDialog: {
+    title: "How do you want to import the write-up?",
+    description: "You can <b>add</b> the imported sections to the existing ones (nothing will be lost), or <b>replace</b> the current write-up (existing sections will be lost).",
+    cancel: "Cancel",
+    addButton: "Add (merge)",
+    replaceButton: "Replace"
+  },
+  languageSwitchDialog: {
+    title: "Change language?",
+    description: "Changing the language will reset the current write-up and any unsaved changes will be lost. Do you want to continue?",
+    cancel: "Cancel",
+    continue: "Continue"
   },
 } as const;
 

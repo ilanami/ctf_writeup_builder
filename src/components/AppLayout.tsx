@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { SectionType, WriteUpSection, WriteUp, Screenshot, AiProcessedSection } from '@/lib/types';
-import { SECTION_TYPES_KEYS, getSectionItemIcon, LOCAL_STORAGE_KEY, createDefaultSection } from '@/lib/constants';
+import { SECTION_TYPES_KEYS, getSectionItemIcon, LOCAL_STORAGE_KEY, createDefaultSection, DEFAULT_SECTIONS_TEMPLATE_KEYS } from '@/lib/constants';
 import { SectionItemCard } from './SectionItemCard';
 import { ScrollArea } from './ui/scroll-area';
 import { format, parseISO } from 'date-fns';
@@ -36,6 +36,7 @@ import { extractTextAndImagesWithPdfJSEnhanced } from '../utils/pdfExtractorEnha
 import ApiKeyConfigModal from './ApiKeyConfigModal';
 import AboutModal from './AboutModal';
 import HelpModal from './HelpModal';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 
 const USER_GOOGLE_AI_API_KEY_NAME = 'USER_GOOGLE_AI_API_KEY';
@@ -72,11 +73,18 @@ const AppHeader: React.FC = () => {
   const currentLocale = useCurrentLocale();
   const changeLocale = useChangeLocale();
   const dateLocale = currentLocale === 'es' ? es : enUS;
+  const tImportDialog = useScopedI18n('importDialog');
+  const tLangDialog = useScopedI18n('languageSwitchDialog');
+  const [showLangDialog, setShowLangDialog] = useState(false);
+  const [pendingLocale, setPendingLocale] = useState<string | null>(null);
 
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [apiKeyConfig, setApiKeyConfig] = useState({ provider: 'gemini', apiKey: '' });
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<any>(null);
+  const [pendingImportType, setPendingImportType] = useState<'json' | 'md' | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     const savedProvider = localStorage.getItem('aiProvider') || 'gemini';
@@ -152,7 +160,16 @@ const AppHeader: React.FC = () => {
       
       mdContent += `# ${writeUpTitleText}\n\n`;
       mdContent += `**${t('generalInfo.author')}:** ${writeUpAuthorText}  \n`;
-      mdContent += `**${t('generalInfo.date')}:** ${writeUp.date ? format(parseISO(writeUp.date), "PPP", { locale: dateLocale }) : t('generalInfo.selectDate')}  \n`;
+      mdContent += `**${t('generalInfo.date')}:** `;
+      if (writeUp.date) {
+        try {
+          mdContent += `${format(parseISO(writeUp.date), "PPP", { locale: dateLocale })}  \n`;
+        } catch {
+          mdContent += `${writeUp.date}  \n`;
+        }
+      } else {
+        mdContent += `${t('generalInfo.selectDate')}  \n`;
+      }
       
       const difficultyKey = writeUp.difficulty as keyof ReturnType<typeof useScopedI18n<'difficulties'>>;
       const osKey = writeUp.os as keyof ReturnType<typeof useScopedI18n<'operatingSystems'>>;
@@ -239,6 +256,17 @@ const AppHeader: React.FC = () => {
     }
   };
 
+  const mergeSections = (currentSections: WriteUpSection[], importedSections: WriteUpSection[]) => {
+    const userSections = currentSections.filter(s => !s.isTemplate);
+    const importedUserSections = importedSections.filter(s => !s.isTemplate);
+    const normalizedImported = importedUserSections.map(s => ({
+      ...s,
+      id: uuidv4(),
+      isTemplate: false,
+    }));
+    return [...userSections, ...normalizedImported];
+  };
+
   const handleImportJson = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -250,21 +278,20 @@ const AppHeader: React.FC = () => {
             throw new Error(tt('jsonImportErrorDetails', {errorMessage: "El archivo JSON está vacío o no se pudo leer."}));
           }
           const importedData = JSON.parse(importedContent);
-          
           if (typeof importedData !== 'object' || importedData === null) {
              throw new Error(tt('jsonImportErrorDetails', {errorMessage: "Formato JSON inválido. El contenido debe ser un objeto."}));
           }
-          
           if (importedData.hasOwnProperty('sections')) {
             if (!Array.isArray(importedData.sections)) {
                throw new Error(tt('jsonImportErrorDetails', {errorMessage: "Formato JSON inválido. La propiedad 'sections' debe ser un array."}));
             }
-            dispatch({ type: 'LOAD_WRITEUP', payload: importedData });
-            toast({ title: tt('success'), description: tt('jsonSectionsImported') });
+            setPendingImport(importedData);
+            setPendingImportType('json');
+            setShowImportDialog(true);
+            return;
           } else {
              toast({ title: tt('info'), description: tt('jsonNoSectionsToImportNothingToAdd') });
           }
-
         } catch (error) {
           console.error("Error importing JSON:", error);
           const errorMessage = error instanceof Error ? error.message : "Formato de archivo JSON incorrecto o corrupto.";
@@ -276,7 +303,7 @@ const AppHeader: React.FC = () => {
       };
       reader.readAsText(file);
     }
-    if (event.target) event.target.value = ''; 
+    if (event.target) event.target.value = '';
   };
 
   const handleImportMdFile = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -451,13 +478,10 @@ const AppHeader: React.FC = () => {
             sections: sections
           };
 
-          // Update the state with the imported write-up
-          dispatch({ type: 'LOAD_WRITEUP', payload: importedWriteUp });
-          toast({ 
-            title: tt('success'), 
-            description: tt('mdSectionImported', { sectionTitle: writeUpTitle }) 
-          });
-
+          setPendingImport(importedWriteUp);
+          setPendingImportType('md');
+          setShowImportDialog(true);
+          return;
         } catch (error) {
           console.error("Error importing Markdown:", error);
           const errorMessage = error instanceof Error ? error.message : "No se pudo procesar el archivo Markdown.";
@@ -531,10 +555,78 @@ const AppHeader: React.FC = () => {
 
   const handleLocaleChange = () => {
     const targetLocale = currentLocale === 'es' ? 'en' : 'es';
-    console.log(`AppLayout: Changing locale from ${currentLocale} to ${targetLocale}`);
-    changeLocale(targetLocale);
+    setPendingLocale(targetLocale);
+    setShowLangDialog(true);
   };
 
+  const confirmLocaleChange = () => {
+    if (pendingLocale) {
+      changeLocale(pendingLocale);
+      setShowLangDialog(false);
+      setPendingLocale(null);
+    }
+  };
+
+  const cancelLocaleChange = () => {
+    setShowLangDialog(false);
+    setPendingLocale(null);
+  };
+
+  // Normaliza isTemplate en todas las secciones importadas
+  const normalizeSections = (sections: WriteUpSection[]) => {
+    const templateTitles = new Set(DEFAULT_SECTIONS_TEMPLATE_KEYS.map(t => `defaultSections.${t.titleKey}`));
+    return sections.map(s => {
+      if (templateTitles.has(s.title)) {
+        return { ...s, isTemplate: true };
+      } else {
+        return { ...s, isTemplate: false };
+      }
+    });
+  };
+
+  // Handler para el modal de importación
+  const handleImportDialogAction = (action: 'merge' | 'replace') => {
+    if (!pendingImport) return;
+    let importedData = pendingImportType === 'json' ? { ...pendingImport } : { ...pendingImport };
+    importedData.sections = importedData.sections || [];
+    importedData.sections = normalizeSections(importedData.sections);
+    const templateSections = DEFAULT_SECTIONS_TEMPLATE_KEYS.map(sec => ({
+      id: uuidv4(),
+      type: sec.type,
+      title: `defaultSections.${sec.titleKey}`,
+      content: `defaultSectionsContent.${sec.contentKey}`,
+      screenshots: [],
+      isTemplate: true,
+    }));
+    if (action === 'merge') {
+      const currentSections = state.writeUp.sections || [];
+      const normalizedCurrent = normalizeSections(currentSections);
+      const mergedUserSections = mergeSections(normalizedCurrent, importedData.sections);
+      importedData.sections = [
+        ...mergedUserSections,
+        ...templateSections
+      ];
+      importedData.title = state.writeUp.title;
+      importedData.author = state.writeUp.author;
+      importedData.date = state.writeUp.date;
+      importedData.difficulty = state.writeUp.difficulty;
+      importedData.os = state.writeUp.os;
+      importedData.tags = state.writeUp.tags;
+      importedData.machineImage = state.writeUp.machineImage;
+      dispatch({ type: 'LOAD_WRITEUP', payload: importedData });
+      toast({ title: tt('success'), description: tt('jsonSectionsImported') });
+    } else {
+      importedData.sections = [
+        ...importedData.sections.filter(s => !s.isTemplate),
+        ...templateSections
+      ];
+      dispatch({ type: 'LOAD_WRITEUP', payload: importedData });
+      toast({ title: tt('success'), description: tt('jsonSectionsImported') });
+    }
+    setPendingImport(null);
+    setPendingImportType(null);
+    setShowImportDialog(false);
+  };
 
   return (
     <header className="flex items-center justify-between p-3 border-b-4 border-l-4 border-r-4 border-[#00ff00] bg-background sticky top-0 z-10">
@@ -652,6 +744,33 @@ const AppHeader: React.FC = () => {
       </div>
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tImportDialog('title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span dangerouslySetInnerHTML={{ __html: tImportDialog('description') }} />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowImportDialog(false); setPendingImport(null); setPendingImportType(null); }}>{tImportDialog('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleImportDialogAction('merge')}>{tImportDialog('addButton')}</AlertDialogAction>
+            <AlertDialogAction onClick={() => handleImportDialogAction('replace')}>{tImportDialog('replaceButton')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={showLangDialog} onOpenChange={setShowLangDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tLangDialog('title')}</AlertDialogTitle>
+            <AlertDialogDescription>{tLangDialog('description')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelLocaleChange}>{tLangDialog('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLocaleChange}>{tLangDialog('continue')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 };
@@ -679,6 +798,16 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   const userSections = writeUp.sections.filter(s => !s.isTemplate);
   const templateSections = writeUp.sections.filter(s => s.isTemplate);
 
+  // Drag & Drop handler
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+    const reordered = Array.from(userSections);
+    const [removed] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, removed);
+    // Mantén las plantillas sugeridas al final
+    dispatch({ type: 'REORDER_SECTIONS', payload: [...reordered, ...templateSections] });
+  };
+
   return (
     <div className="p-3 space-y-2 h-full flex flex-col bg-card rounded-lg shadow-md border-r-4 border-[#00ff00]">
       <Accordion type="multiple" defaultValue={['structure-panel', 'suggested-sections-panel', 'add-section-panel']} className="w-full">
@@ -692,7 +821,54 @@ const StructureAndAddSectionsPanel: React.FC = () => {
           <AccordionContent className="pt-1 pb-2">
             <ScrollArea className="h-[calc(40vh-110px)] min-h-[190px] pr-1">
               <div className="flex flex-col gap-2 pb-2">
-                {userSections.length > 0 ? (
+                {/* DRAG & DROP: Secciones de usuario */}
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="userSections-droppable" direction="vertical">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} style={{ width: '100%' }}>
+                        {userSections.map((section, index) => {
+                          const Icon = getSectionItemIcon(section.type, section.title);
+                          const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
+                          const displayTitle = isI18nKey ? t(section.title as any) : section.title;
+                          const description = section.type ? tst(`${section.type}.description` as any) : '';
+                          return (
+                            <Draggable key={section.id} draggableId={section.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    background: snapshot.isDragging ? '#003300' : undefined,
+                                    width: '100%',
+                                    minWidth: 0,
+                                    margin: 0,
+                                    boxSizing: 'border-box',
+                                  }}
+                                >
+                                  <SectionItemCard
+                                    section={section}
+                                    icon={<Icon className="mr-2 h-5 w-5 mt-0.5 flex-shrink-0 text-foreground" />}
+                                    isActive={section.id === activeSectionId}
+                                    onSelect={() => handleSelectSection(section.id)}
+                                    onDelete={() => handleDeleteSection(section.id)}
+                                    className=""
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+                {/* FIN DRAG & DROP */}
+
+                {/* CÓDIGO ANTERIOR (sin drag & drop) - dejar comentado por si hay que volver atrás */}
+                {false && userSections.length > 0 ? (
                   userSections.map((section) => {
                     const Icon = getSectionItemIcon(section.type, section.title);
                     const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
@@ -713,6 +889,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                 ) : (
                   <p className="text-center text-muted-foreground py-4">{tsp('noSectionsYet')}</p>
                 )}
+                {/* FIN CÓDIGO ANTERIOR */}
               </div>
             </ScrollArea>
           </AccordionContent>

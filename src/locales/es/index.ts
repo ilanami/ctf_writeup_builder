@@ -15,7 +15,7 @@ export default {
     selectOS: 'Selecciona S.O.',
     machineImage: 'Imagen de la Máquina',
     addImage: 'Añadir imagen',
-    writeupTitlePlaceholder: "Ej. 'Análisis de Kioptrix Nivel 1'",
+    writeupTitlePlaceholder: "Ej. Resolución Máquina Blue",
     authorPlaceholder: "Tu nombre o alias",
     defaultWriteupTitle: "Nuevo Write-up", // Clave para título por defecto
     defaultAuthor: "Anónimo", // Clave para autor por defecto
@@ -62,7 +62,7 @@ export default {
     flagValue: 'Valor de la Flag',
     contentMarkdown: 'Contenido (Markdown)',
     aiAssistant: 'Asistente IA',
-    aiPromptPlaceholder: 'Ej: \'Análisis de vulnerabilidades con Nessus\'',
+    aiPromptPlaceholder: "Ej: 'Ayúdame con los comandos de Nmap para escanear esta IP 192.168.0.00'",
     generateWithAI: 'Generar con IA',
     generating: 'Generando...',
     aiSuggestion: 'Sugerencia de IA:',
@@ -368,6 +368,19 @@ export default {
     contactDesc: 'Contacta directamente para soporte personalizado',
     expandAll: 'Expandir Todo',
     communityHelp: 'Ayuda de la comunidad CTF',
+  },
+  importDialog: {
+    title: "¿Cómo quieres importar el write-up?",
+    description: "Puedes <b>añadir</b> las secciones importadas a las existentes (no se perderá nada), o <b>reemplazar</b> el write-up actual (se perderán las secciones actuales).",
+    cancel: "Cancelar",
+    addButton: "Añadir (merge)",
+    replaceButton: "Reemplazar"
+  },
+  languageSwitchDialog: {
+    title: "¿Cambiar de idioma?",
+    description: "Cambiar de idioma reiniciará el write-up actual y se perderán los cambios no guardados. ¿Deseas continuar?",
+    cancel: "Cancelar",
+    continue: "Continuar"
   },
 } as const;
 

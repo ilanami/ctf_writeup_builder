@@ -30,7 +30,7 @@ import { marked } from 'marked';
 import { format, parseISO } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useScopedI18n, useCurrentLocale, I18nProviderClient } from '@/locales/client';
+import { useScopedI18n, useCurrentLocale, I18nProviderClient, useI18n } from '@/locales/client';
 import DOMPurify from 'dompurify';
 
 // Define constants locally
@@ -121,7 +121,7 @@ const PDF_THEMES_CONFIG: Record<PdfTheme, { nameKey: string; backgroundColor: st
 };
 
 const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, options, pdfStyles, currentLocale, tDifficulties, tOS, tPdfModal }) => {
-  const t = useScopedI18n('pdfModal');
+  const t = useI18n();
   const sectionsToExport = writeUp.sections.filter(section => !section.isTemplate);
   const currentTheme = PDF_THEMES_CONFIG[options.theme] || PDF_THEMES_CONFIG.Hacker;
   const dateLocale = currentLocale === 'es' ? es : enUS;
@@ -218,8 +218,8 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
               sectionHtmlContent = `<p><em>${tPdfModal('errorInvalidContentType')}</em></p>`;
             }
             
-            const displayTitle = section.isTemplate && section.title?.startsWith('defaultSections.') 
-              ? t(section.title as any) 
+            const displayTitle = section.isTemplate && section.title?.startsWith('defaultSections.')
+              ? tPdfModal(section.title as any)
               : section.title;
 
             return (
@@ -328,6 +328,7 @@ export const PdfExportModal: React.FC = () => {
   const tPdfModal = useScopedI18n('pdfModal');
   const tDifficulties = useScopedI18n('difficulties');
   const tOS = useScopedI18n('operatingSystems');
+  const tt = useScopedI18n('toasts');
 
   const currentThemeConfig = SIMPLE_PDF_THEMES_CONFIG[theme];
 
@@ -589,8 +590,8 @@ export const PdfExportModal: React.FC = () => {
 
     setIsExporting(true);
     toast({ 
-      title: tPdfModal('processingPDF'), 
-      description: tPdfModal('generatingPDF') 
+      title: tt('info'),
+      description: tt('pdfExportStarted'),
     });
 
     try {
@@ -642,17 +643,16 @@ export const PdfExportModal: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Imprimir
-      printFrame.contentWindow?.print();
+      const printWindow = printFrame.contentWindow;
+      if (!printWindow) throw new Error('Could not access print window');
 
-      // Limpiar después de un delay
-      setTimeout(() => {
+      // Limpiar después de imprimir o cancelar (no mostrar toast de éxito)
+      printWindow.addEventListener('afterprint', () => {
         document.body.removeChild(printFrame);
         setIsExporting(false);
-        toast({ 
-          title: tPdfModal('pdfExportSuccess'), 
-          description: tPdfModal('pdfExportedSuccessfully') 
-        });
-      }, 1000);
+      });
+
+      printWindow.print();
 
     } catch (error: any) {
       console.error('PDF Export Error:', error);
