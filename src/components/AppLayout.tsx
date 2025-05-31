@@ -629,118 +629,112 @@ const AppHeader: React.FC = () => {
   };
 
   return (
-    <header className="flex items-center justify-between p-3 border-b-4 border-l-4 border-r-4 border-[#00ff00] bg-background sticky top-0 z-10">
-      <div className="flex items-center">
-        <TerminalSquare className="h-8 w-8 text-foreground mr-2" />
-        <h1 className="text-2xl font-bold text-foreground">
+    <header className="flex flex-row items-start p-1 sm:p-2 border-b-4 border-l-4 border-r-4 border-[#00ff00] bg-background sticky top-0 z-10">
+      <div className="flex items-center mb-1 sm:mb-0">
+        <TerminalSquare className="h-8 w-8 sm:h-8 sm:w-8 text-foreground mr-1 sm:mr-2" />
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground whitespace-nowrap">
           <span>{t('appTitle')} {'>'}</span><span className="blinking-cursor">_</span>
         </h1>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-              <PlusCircle className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('new')}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{th('newWriteupTitle')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {th('newWriteupDescription')}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="font-bold">{th('cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={handleNewWriteUp} className="bg-foreground text-primary-foreground font-bold">{th('continue')}</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <Button onClick={() => setIsAboutOpen(true)} variant="outline" size="sm" title={t('about.title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-          <Info className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {t('about.title')}
-        </Button>
-        <Button onClick={() => setIsHelpOpen(true)} variant="outline" size="sm" title={t('help.title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-          <HelpCircle className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {t('help.title')}
-        </Button>
-        <Button onClick={handleExportMd} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}><FileText className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('exportMD')}</Button>
-        <PdfExportModal />
-        
-        <label htmlFor="import-json-input-header" className="mb-0">
-          <Button variant="outline" size="sm" asChild className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-            <span><Upload className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('importJSON')}</span>
+      <div className="flex flex-col gap-y-4 ml-12 w-full max-w-[calc(100%-350px)]">
+        <div className="flex flex-wrap gap-x-2 gap-y-1">
+          {/* Fila superior: Nuevo, Guardar, Vista Previa/Editor, Exportar MD, Exportar PDF, API Key, Acerca de */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-2 text-[0.75rem] sm:text-[0.85rem]">
+                <PlusCircle className="mr-1 h-3.5 w-3.5" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('new')}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{th('newWriteupTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {th('newWriteupDescription')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="font-bold">{th('cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleNewWriteUp} className="bg-foreground text-primary-foreground font-bold">{th('continue')}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button onClick={handleSaveProgress} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"><Save className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('save')}</Button>
+          <Button onClick={toggleView} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+            {currentView === 'editor' ? <Eye className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> : <Edit3 className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />}
+            {currentView === 'editor' ? th('preview') : th('editor')}
           </Button>
-        </label>
-        <input id="import-json-input-header" type="file" accept=".json" onChange={handleImportJson} className="hidden" />
-
-        <label htmlFor="import-md-input-header" className="mb-0">
-          <Button variant="outline" size="sm" asChild className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-            <span><FileArchive className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('importMD')}</span>
+          <Button onClick={handleExportMd} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"><FileText className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('exportMD')}</Button>
+          <PdfExportModal />
+          <Button onClick={() => setIsApiKeyModalOpen(true)} variant="outline" size="sm" title={tai('configureApiKeyButton')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+            <KeyRound className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('configureApiKey')}
           </Button>
-        </label>
-        <input id="import-md-input-header" type="file" accept=".md,.txt,text/markdown" onChange={handleImportMdFile} className="hidden" />
-        
-        <Button onClick={handleSaveProgress} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}><Save className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('save')}</Button>
-        
-        <Button onClick={() => setIsApiKeyModalOpen(true)} variant="outline" size="sm" title={tai('configureApiKeyButton')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-          <KeyRound className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('configureApiKey')}
-        </Button>
-        {isApiKeyModalOpen && (
-          <ApiKeyConfigModal
-            onSave={handleSaveApiKey}
-            onCancel={() => setIsApiKeyModalOpen(false)}
-          />
-        )}
-        
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" title={tDonations('title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-              <Gift className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('donateButton')}
+          <Button onClick={() => setIsAboutOpen(true)} variant="outline" size="sm" title={t('about.title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+            <Info className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {t('about.title')}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-x-2 gap-y-1 mt-0">
+          {/* Fila inferior: English, Importar JSON, Importar MD, Backup JSON, Donar, Ayuda y Preguntas Frecuentes */}
+          <Button onClick={handleLocaleChange} variant="outline" size="sm" title={th('toggleLanguage')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+            <Languages className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+            {currentLocale === 'es' ? th('switchToEnglish') : th('switchToSpanish')}
+          </Button>
+          <label htmlFor="import-json-input-header" className="mb-0">
+            <Button variant="outline" size="sm" asChild className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+              <span><Upload className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('importJSON')}</span>
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{tDonations('title')}</AlertDialogTitle>
-              <AlertDialogDescription className="text-left whitespace-pre-wrap">
-                {tDonations('message')}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <div className="flex flex-col sm:flex-row gap-2 w-full">
-                <AlertDialogCancel className="font-bold w-full sm:w-auto">{tDonations('closeButton')}</AlertDialogCancel>
-                <AlertDialogAction asChild>
-                  <a 
-                    href="https://www.paypal.me/1511amff" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-foreground text-primary-foreground hover:bg-foreground/90 h-10 px-4 py-2 font-bold w-full sm:w-auto"
-                  >
-                    {tDonations('donateButtonAction')}
-                  </a>
-                </AlertDialogAction>
-                <AlertDialogAction asChild>
-                  <a
-                    href="https://buymeacoffee.com/ilanami"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-400 text-black hover:bg-yellow-300 h-10 px-4 py-2 font-bold w-full sm:w-auto"
-                  >
-                    ☕ Buy Me a Coffee
-                  </a>
-                </AlertDialogAction>
-              </div>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <Button onClick={toggleView} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-          {currentView === 'editor' ? <Eye className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> : <Edit3 className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />}
-          {currentView === 'editor' ? th('preview') : th('editor')}
-        </Button>
-        <Button onClick={handleExportJsonBackup} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}><Download className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('backup')}</Button>
-        <Button onClick={handleLocaleChange} variant="outline" size="sm" title={th('toggleLanguage')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-7 px-1.5 text-[0.90rem]" style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>
-          <Languages className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
-          {currentLocale === 'es' ? th('switchToEnglish') : th('switchToSpanish')}
-        </Button>
+          </label>
+          <input id="import-json-input-header" type="file" accept=".json" onChange={handleImportJson} className="hidden" />
+          <label htmlFor="import-md-input-header" className="mb-0">
+            <Button variant="outline" size="sm" asChild className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+              <span><FileArchive className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('importMD')}</span>
+            </Button>
+          </label>
+          <input id="import-md-input-header" type="file" accept=".md,.txt,text/markdown" onChange={handleImportMdFile} className="hidden" />
+          <Button onClick={handleExportJsonBackup} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"><Download className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('backup')}</Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" title={tDonations('title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+                <Gift className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('donateButton')}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{tDonations('title')}</AlertDialogTitle>
+                <AlertDialogDescription className="text-left whitespace-pre-wrap">
+                  {tDonations('message')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <div className="flex flex-col sm:flex-row gap-2 w-full">
+                  <AlertDialogCancel className="font-bold w-full sm:w-auto">{tDonations('closeButton')}</AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <a 
+                      href="https://www.paypal.me/1511amff" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-foreground text-primary-foreground hover:bg-foreground/90 h-10 px-4 py-2 font-bold w-full sm:w-auto"
+                    >
+                      {tDonations('donateButtonAction')}
+                    </a>
+                  </AlertDialogAction>
+                  <AlertDialogAction asChild>
+                    <a
+                      href="https://buymeacoffee.com/ilanami"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-400 text-black hover:bg-yellow-300 h-10 px-4 py-2 font-bold w-full sm:w-auto"
+                    >
+                      ☕ Buy Me a Coffee
+                    </a>
+                  </AlertDialogAction>
+                </div>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button onClick={() => setIsHelpOpen(true)} variant="outline" size="sm" title={t('help.title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
+            <HelpCircle className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {t('help.title')}
+          </Button>
+        </div>
       </div>
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
@@ -809,18 +803,18 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   };
 
   return (
-    <div className="p-3 space-y-2 h-full flex flex-col bg-card rounded-lg shadow-md border-r-4 border-[#00ff00]">
+    <div className="p-2 space-y-1 h-full flex flex-col bg-card rounded-lg shadow-md border-r-4 border-[#00ff00]">
       <Accordion type="multiple" defaultValue={['structure-panel', 'suggested-sections-panel', 'add-section-panel']} className="w-full">
         {/* Estructura Real */}
         <AccordionItem value="structure-panel">
-          <AccordionTrigger className="py-2 hover:no-underline">
-            <h3 className="text-lg font-bold text-foreground">
+          <AccordionTrigger className="py-1 hover:no-underline">
+            <h3 className="text-sm sm:text-base font-bold text-foreground">
               <span>{tsp('structure')}&nbsp;&gt;</span><span className="blinking-cursor">_</span>
             </h3>
           </AccordionTrigger>
-          <AccordionContent className="pt-1 pb-2">
-            <ScrollArea className="h-[calc(40vh-110px)] min-h-[190px] pr-1">
-              <div className="flex flex-col gap-2 pb-2">
+          <AccordionContent className="pt-1 pb-1">
+            <ScrollArea className="h-[calc(40vh-90px)] min-h-[200px] pr-1">
+              <div className="flex flex-col gap-1 pb-1">
                 {/* DRAG & DROP: Secciones de usuario */}
                 <DragDropContext onDragEnd={handleDragEnd}>
                   <Droppable droppableId="userSections-droppable" direction="vertical">
@@ -897,14 +891,14 @@ const StructureAndAddSectionsPanel: React.FC = () => {
 
         {/* Secciones Sugeridas */}
         <AccordionItem value="suggested-sections-panel">
-          <AccordionTrigger className="py-2 hover:no-underline">
-            <h3 className="text-lg font-bold text-foreground">
+          <AccordionTrigger className="py-1 hover:no-underline">
+            <h3 className="text-sm sm:text-base font-bold text-foreground">
               <span>{tsp('suggestedSections')}&nbsp;&gt;</span><span className="blinking-cursor">_</span>
             </h3>
           </AccordionTrigger>
-          <AccordionContent className="pt-1 pb-2">
-            <ScrollArea className="h-[calc(40vh-110px)] min-h-[190px] pr-1">
-              <div className="flex flex-col gap-2 pb-2">
+          <AccordionContent className="pt-1 pb-1">
+            <ScrollArea className="h-[calc(30vh-90px)] min-h-[140px] pr-1">
+              <div className="flex flex-col gap-1 pb-1">
                 {templateSections.length > 0 ? (
                   <>
                     {templateSections.map((section) => {
@@ -920,7 +914,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                             dispatch({ type: 'SET_EDITING_SUGGESTED_SECTION', payload: section });
                           }}
                           onDelete={() => handleDeleteSection(section.id)}
-                          className="opacity-70 hover:opacity-100 transition-opacity"
+                          className="opacity-70 hover:opacity-100 transition-opacity compact"
                         />
                        )
                     })}
@@ -936,24 +930,24 @@ const StructureAndAddSectionsPanel: React.FC = () => {
         
         {/* Añadir Nueva Sección */}
         <AccordionItem value="add-section-panel">
-          <AccordionTrigger className="py-2 hover:no-underline">
-            <h3 className="text-lg font-bold text-foreground">
+          <AccordionTrigger className="py-1 hover:no-underline">
+            <h3 className="text-sm sm:text-base font-bold text-foreground">
               <span>{tsp('addSection')}&nbsp;&gt;</span><span className="blinking-cursor">_</span>
             </h3>
           </AccordionTrigger>
           <AccordionContent className="pt-1">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
               {SECTION_TYPES_KEYS.map(stKey => {
                 const OriginalIcon = getSectionItemIcon(stKey as SectionType); 
                 const Icon = OriginalIcon || ListChecks;
                 
                 return (
-                  <Button key={stKey} variant="outline" onClick={() => handleAddSection(stKey as SectionType)} className="justify-start text-left h-auto py-2 text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
+                  <Button key={stKey} variant="outline" onClick={() => handleAddSection(stKey as SectionType)} className="justify-start text-left h-auto py-1 text-foreground font-bold border-border hover:bg-accent hover:text-accent-foreground">
                     <div className="flex items-start">
-                      <Icon className="mr-2 h-5 w-5 mt-0.5 flex-shrink-0 text-foreground" />
+                      <Icon className="mr-1.5 h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-foreground" />
                       <div>
-                        <span className="font-medium text-foreground">{tst(`${stKey}.label` as any)}</span>
-                        <p className="text-xs text-muted-foreground whitespace-normal">{tst(`${stKey}.description` as any)}</p>
+                        <span className="text-xs font-medium text-foreground">{tst(`${stKey}.label` as any)}</span>
+                        <p className="text-[10px] text-muted-foreground whitespace-normal">{tst(`${stKey}.description` as any)}</p>
                       </div>
                     </div>
                   </Button>
@@ -975,16 +969,16 @@ export const AppLayout: React.FC = () => {
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background border-t-4 border-b-4 border-l-4 border-[#00ff00]">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-[320px] min-w-[300px] max-w-[350px] h-full overflow-y-auto bg-card border-r-4 border-[#00ff00] shadow-md">
+        <aside className="w-[320px] min-w-[300px] max-w-[340px] h-full overflow-y-auto bg-card border-r-4 border-[#00ff00] shadow-md">
           <GeneralInfoPanel />
         </aside>
 
-        <main className="flex-1 h-full overflow-y-auto p-0">
+        <main className="flex-1 h-full overflow-y-auto p-0 max-w-[calc(100%-720px)]">
           {currentView === 'editor' ? <ActiveSectionEditor /> : <WriteUpPreview />}
         </main>
 
         {currentView === 'editor' && (
-          <aside className="w-[450px] min-w-[420px] max-w-[550px] h-full overflow-y-auto border-l-4 border-[#00ff00]">
+          <aside className="w-[400px] min-w-[380px] max-w-[450px] h-full overflow-y-auto border-l-4 border-[#00ff00]">
             <StructureAndAddSectionsPanel />
           </aside>
         )}

@@ -94,16 +94,17 @@ export const ActiveSectionEditor: React.FC = () => {
         <CardContent className="w-full flex flex-col items-center justify-center">
           <span
             style={{
-              fontSize: '2rem',
+              fontSize: '1.2rem',
               fontWeight: 'bold',
               color: '#00ff00',
               textAlign: 'center',
               background: 'none',
               letterSpacing: '0.5px',
               textShadow: '0 0 8px #00ff00',
-              padding: '0.5em 0',
+              padding: '0.3em 0',
               fontFamily: 'monospace, Fira Code, Consolas, Courier New',
               display: 'block',
+              lineHeight: '1.4',
             }}
           >
             {ta('selectSectionToEdit')}<br />{ta('orCreateNew')}
@@ -323,10 +324,10 @@ export const ActiveSectionEditor: React.FC = () => {
 
   return (
     <Card className="h-full overflow-y-auto border-border">
-      <CardHeader>
-        <CardTitle className="text-foreground font-bold">{ta('editingSection', { title: displaySectionTitleInHeader || ta('untitledSection') })}</CardTitle>
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-sm sm:text-base font-bold text-foreground">{ta('editingSection', { title: displaySectionTitleInHeader || ta('untitledSection') })}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 p-4">
+      <CardContent className="space-y-4 p-3">
         <div>
           <Label htmlFor={`section-title-${sectionToEdit.id}`}>{ta('sectionTitle')}</Label>
           <Input

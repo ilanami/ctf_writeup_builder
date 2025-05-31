@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -45,10 +44,16 @@ export const SectionItemCard: React.FC<SectionItemCardProps> = ({
       )}
       onClick={onSelect}
     >
-      <CardContent className="p-3 flex items-center justify-between">
-        <div className="flex items-center flex-grow min-w-0">
-          {icon}
-          <span className={cn("text-sm truncate ml-2", isActive ? "text-foreground font-bold" : "text-foreground font-medium")} title={displayTitle}>
+      <CardContent className={cn("flex items-center justify-between", className?.includes('compact') ? "p-1.5" : "p-3")}> 
+        <div className={cn("flex items-center flex-grow min-w-0", className?.includes('compact') ? "gap-1" : undefined)}> 
+          {icon && React.isValidElement(icon) && className?.includes('compact')
+            ? React.cloneElement(icon, { ...icon.props, className: cn(icon.props?.className, "h-3 w-3 mr-1") }, icon.props.children ?? null)
+            : icon}
+          <span className={cn(
+            className?.includes('compact') ? "text-xs ml-1" : "text-sm ml-2",
+            "truncate",
+            isActive ? "text-foreground font-bold" : "text-foreground font-medium"
+          )} title={displayTitle}>
             {displayTitle || tsp('untitledSection')}
           </span>
         </div>
@@ -57,11 +62,14 @@ export const SectionItemCard: React.FC<SectionItemCardProps> = ({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-7 w-7 ml-2 flex-shrink-0" 
+              className={cn(
+                "text-destructive hover:text-destructive-foreground hover:bg-destructive ml-2 flex-shrink-0",
+                className?.includes('compact') ? "h-5 w-5" : "h-7 w-7"
+              )}
               onClick={(e) => { e.stopPropagation(); }}
               aria-label={tsp('deleteSectionAriaLabel', { title: displayTitle })}
             >
-              <Trash2 size={16} />
+              <Trash2 size={className?.includes('compact') ? 12 : 16} />
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>

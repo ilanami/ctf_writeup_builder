@@ -691,10 +691,9 @@ export const PdfExportModal: React.FC = () => {
         <Button
           variant="outline"
           size="sm"
-          className="border-2 border-[#00ff00] bg-black hover:bg-[#002200] shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider"
-          style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00', color: '#00ff00', fontWeight: 'bold' }}
+          className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"
         >
-          <FileSpreadsheet className="mr-1 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+          <FileSpreadsheet className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
           {tPdfModal('exportButton')}
         </Button>
       </DialogTrigger>

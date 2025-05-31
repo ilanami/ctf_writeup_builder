@@ -55,10 +55,10 @@ export const GeneralInfoPanel: React.FC = () => {
   return (
     <ScrollArea className="h-full p-1">
       <div className="space-y-4 p-4">
-        <h2 className="text-xl font-semibold text-foreground mb-4">{t('title')}</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">{t('title')}</h2>
 
         <div>
-          <Label htmlFor="title">{t('writeupTitle')}</Label>
+          <Label htmlFor="title" className="font-bold text-[#00ff00] text-[0.95rem]">{t('writeupTitle')}</Label>
           <Input
             id="title"
             value={writeUp.title}
@@ -68,7 +68,7 @@ export const GeneralInfoPanel: React.FC = () => {
         </div>
 
         <div>
-          <Label htmlFor="author">{t('author')}</Label>
+          <Label htmlFor="author" className="font-bold text-[#00ff00] text-[0.95rem]">{t('author')}</Label>
           <Input
             id="author"
             value={writeUp.author}
@@ -78,7 +78,7 @@ export const GeneralInfoPanel: React.FC = () => {
         </div>
 
         <div>
-          <Label htmlFor="date">{t('date')}</Label>
+          <Label htmlFor="date" className="font-bold text-[#00ff00] text-[0.95rem]">{t('date')}</Label>
            <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -109,7 +109,7 @@ export const GeneralInfoPanel: React.FC = () => {
         </div>
 
         <div>
-          <Label htmlFor="difficulty">{t('difficulty')}</Label>
+          <Label htmlFor="difficulty" className="font-bold text-[#00ff00] text-[0.95rem]">{t('difficulty')}</Label>
           <Select
             value={writeUp.difficulty}
             onValueChange={(value: Difficulty) => handleInputChange('difficulty', value)}
@@ -127,7 +127,7 @@ export const GeneralInfoPanel: React.FC = () => {
           </Select>
         </div>
          <div>
-          <Label htmlFor="tags">{t('tags')}</Label>
+          <Label htmlFor="tags" className="font-bold text-[#00ff00] text-[0.95rem]">{t('tags')}</Label>
           <TagInput
             id="tags"
             tags={writeUp.tags}
@@ -137,7 +137,7 @@ export const GeneralInfoPanel: React.FC = () => {
         </div>
 
         <div>
-          <Label htmlFor="os">{t('os')}</Label>
+          <Label htmlFor="os" className="font-bold text-[#00ff00] text-[0.95rem]">{t('os')}</Label>
           <Select
             value={writeUp.os}
             onValueChange={(value: OperatingSystem) => handleInputChange('os', value)}
@@ -156,7 +156,7 @@ export const GeneralInfoPanel: React.FC = () => {
         </div>
 
         <div>
-          <Label htmlFor="machineImage">{t('machineImage')}</Label>
+          <Label htmlFor="machineImage" className="font-bold text-[#00ff00] text-[0.95rem]">{t('machineImage')}</Label>
           <ImageUploader
             id="machineImage"
             onImageUpload={handleMachineImageUpload}
