@@ -738,6 +738,12 @@ const AppHeader: React.FC = () => {
       </div>
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      {isApiKeyModalOpen && (
+        <ApiKeyConfigModal
+          onSave={handleSaveApiKey}
+          onCancel={() => setIsApiKeyModalOpen(false)}
+        />
+      )}
       <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
