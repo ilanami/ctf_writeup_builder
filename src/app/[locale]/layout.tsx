@@ -6,6 +6,7 @@ import '../globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { I18nProviderClient } from '@/locales/client';
 import type { ReactNode } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
   title: 'CTF Write-up Builder >_',
@@ -30,6 +31,7 @@ export default async function RootLayout({
         <body className={`${GeistSans.variable} ${GeistMono.variable} font-mono antialiased`}>
           {children}
           <Toaster />
+          <Analytics />
         </body>
       </html>
     </I18nProviderClient>
