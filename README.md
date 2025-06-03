@@ -227,15 +227,16 @@ git commit -m "feat: add new functionality"
 git push origin feature/new-functionality
 ```
 
-## ☕ Support the Project
+## 🎁 Support my Projects and Tools
 
-If this tool has been useful to you and has helped you in your CTFs or cybersecurity certifications, consider supporting development with a donation. **It's not mandatory**, but it would help me tremendously to continue creating tools like this and to pay for the cybersecurity certifications I want to obtain.
+If you've enjoyed my projects and tools and found them useful, consider buying me a coffee or making a donation as a thank you.
 
-### 💝 Ways to Donate
-- 💳 **PayPal**: ( https://www.paypal.com/paypalme/1511amff ) 
-- ☕ **Buy me a coffee**: ( https://buymeacoffee.com/ilanami ) 
+It's not mandatory, but it would help me tremendously to continue creating tools like this and to pay for the cybersecurity certifications I want to obtain.
 
-> 🙏 **Thank you so much for your support!** Every donation, no matter how small, helps maintain this project and develop new features.
+Thank you very much for your support!
+
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.me/1511amff)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/ilanami)
 
 ## 📞 Support and Contact
 

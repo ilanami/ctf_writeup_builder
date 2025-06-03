@@ -13,7 +13,6 @@ import { Trash2, Loader2, ClipboardCopy, XCircle, Wand2 } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // import { suggestSectionContent } from '@/ai/flows/section-suggester-flow'; // Comentado para usar API Key del usuario
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { useToast } from '@/hooks/use-toast';
 import { useI18n, useScopedI18n } from '@/locales/client';
 
@@ -205,47 +204,19 @@ export const ActiveSectionEditor: React.FC = () => {
     setAiGeneratedSuggestion(null);
     try {
       let suggestion = '';
-      if (provider === 'gemini') {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const promptText = "Eres un experto en ciberseguridad y Capture The Flag (CTF) y un redactor técnico.\nTu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.\n\nTítulo de la Sección: " + titleForAi + "\nTipo de Sección: " + sectionToEdit.type + "\n" + (aiPrompt ? "Foco/Palabras clave del usuario para esta sección: " + aiPrompt : "") + "\n\nBasándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.\n- Si el tipo de sección es 'paso', describe acciones comunes, herramientas o comandos relevantes para el título y el prompt.\n- Si es 'pregunta', formula una pregunta relevante basada en el título/prompt y proporciona una respuesta común o de ejemplo.\n- Si es 'flag', describe cómo una flag podría encontrarse, formatearse típicamente, o qué podría representar en el contexto del título/prompt.\n- Si es 'notas', proporciona observaciones generales, consejos o puntos de investigación adicionales relacionados con el título/prompt.\n\nUsa Markdown de forma efectiva:\n- Emplea encabezados (ej. ## Sub-encabezado) si es apropiado para la estructura.\n- Usa bloques de código (ej. ```bash ... ```) para comandos o fragmentos de código.\n- Usa listas (con viñetas o numeradas) para pasos o ítems enumerados.\n- Enfatiza términos clave usando **negrita** o *cursiva*.\n\nSé conciso pero informativo. Busca un punto de partida útil que el usuario pueda luego elaborar.\n\nContenido Markdown Generado:\n";
-        const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: promptText }] }], generationConfig: { temperature: 0.7, topK: 1, topP: 1, maxOutputTokens: 2048 }, safetySettings: [ { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE }, ] });
-        const response = result.response;
-        suggestion = response.text();
-      } else if (provider === 'openai') {
-        // Llamada a OpenAI
-        const promptText = "Eres un experto en ciberseguridad y Capture The Flag (CTF) y un redactor técnico.\nTu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.\n\nTítulo de la Sección: " + titleForAi + "\nTipo de Sección: " + sectionToEdit.type + "\n" + (aiPrompt ? "Foco/Palabras clave del usuario para esta sección: " + aiPrompt : "") + "\n\nBasándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.\n- Si el tipo de sección es 'paso', describe acciones comunes, herramientas o comandos relevantes para el título y el prompt.\n- Si es 'pregunta', formula una pregunta relevante basada en el título/prompt y proporciona una respuesta común o de ejemplo.\n- Si es 'flag', describe cómo una flag podría encontrarse, formatearse típicamente, o qué podría representar en el contexto del título/prompt.\n- Si es 'notas', proporciona observaciones generales, consejos o puntos de investigación adicionales relacionados con el título/prompt.\n\nUsa Markdown de forma efectiva:\n- Emplea encabezados (ej. ## Sub-encabezado) si es apropiado para la estructura.\n- Usa bloques de código (ej. ```bash ... ```) para comandos o fragmentos de código.\n- Usa listas (con viñetas o numeradas) para pasos o ítems enumerados.\n- Enfatiza términos clave usando **negrita** o *cursiva*.\n\nSé conciso pero informativo. Busca un punto de partida útil que el usuario pueda luego elaborar.\n\nContenido Markdown Generado:\n";
-        const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
-            messages: [
-              { role: 'system', content: 'Eres un experto en ciberseguridad y CTF. Responde en Markdown.' },
-              { role: 'user', content: promptText },
-            ],
-            max_tokens: 2048,
-            temperature: 0.7,
-          }),
-        });
-        if (!openaiRes.ok) {
-          let errorMsg = openaiRes.statusText;
-          try {
-            const errorJson = await openaiRes.json();
-            if (errorJson && errorJson.error && errorJson.error.message) {
-              errorMsg = errorJson.error.message;
-            }
-          } catch {}
-          throw new Error('Error al llamar a la API de OpenAI: ' + errorMsg);
-        }
-        const openaiData = await openaiRes.json();
-        suggestion = openaiData.choices?.[0]?.message?.content || '';
-      } else {
-        throw new Error('Proveedor de IA no soportado.');
-      }
+      const promptText = "Eres un experto en ciberseguridad y Capture The Flag (CTF) y un redactor técnico.\nTu tarea es generar contenido Markdown inicial para una sección específica de un write-up de CTF.\n\nTítulo de la Sección: " + titleForAi + "\nTipo de Sección: " + sectionToEdit.type + "\n" + (aiPrompt ? "Foco/Palabras clave del usuario para esta sección: " + aiPrompt : "") + "\n\nBasándote en esta información, proporciona un borrador Markdown completo y bien formateado para esta sección.\n- Si el tipo de sección es 'paso', describe acciones comunes, herramientas o comandos relevantes para el título y el prompt.\n- Si es 'pregunta', formula una pregunta relevante basada en el título/prompt y proporciona una respuesta común o de ejemplo.\n- Si es 'flag', describe cómo una flag podría encontrarse, formatearse típicamente, o qué podría representar en el contexto del título/prompt.\n- Si es 'notas', proporciona observaciones generales, consejos o puntos de investigación adicionales relacionados con el título/prompt.\n\nUsa Markdown de forma efectiva:\n- Emplea encabezados (ej. ## Sub-encabezado) si es apropiado para la estructura.\n- Usa bloques de código (ej. ```bash ... ```) para comandos o fragmentos de código.\n- Usa listas (con viñetas o numeradas) para pasos o ítems enumerados.\n- Enfatiza términos clave usando **negrita** o *cursiva*.\n\nSé conciso pero informativo. Busca un punto de partida útil que el usuario pueda luego elaborar.\n\nContenido Markdown Generado:\n";
+      const response = await fetch('/api/ai-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptText,
+          provider,
+          apiKey
+        })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      suggestion = data.content || '';
       setAiGeneratedSuggestion(suggestion);
       toast({
         title: ta('suggestionGenerated'),
@@ -259,7 +230,6 @@ export const ActiveSectionEditor: React.FC = () => {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       } else if (error && typeof error === 'object' && 'message' in error) {
-        // fallback por si acaso
         errorMessage = (error as any).message;
       } else {
         errorMessage = tt('unknownError');

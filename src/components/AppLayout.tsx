@@ -29,7 +29,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { processPdf as processPdfWithAIModels, PdfInput, AiPdfParseOutput } from '@/ai/flows/pdf-processor-flow';
 import { extractBasicTextFromPDF } from '../utils/pdfExtractorBasic';
 import { extractTextAndImagesWithPdfJSEnhanced } from '../utils/pdfExtractorEnhanced';
