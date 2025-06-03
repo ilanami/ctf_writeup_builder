@@ -16,11 +16,12 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-  params: { locale },
+  params
 }: Readonly<{
   children: ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
   console.log(`RootLayout rendering with locale: ${locale}`);
   return (
     <I18nProviderClient locale={locale} key={locale}>

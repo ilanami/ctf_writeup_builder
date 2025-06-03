@@ -18,6 +18,14 @@ interface SectionItemCardProps {
   className?: string; 
 }
 
+function isValidI18nKey(key: string, t: any): boolean {
+  try {
+    return t(key, {}) !== key;
+  } catch {
+    return false;
+  }
+}
+
 export const SectionItemCard: React.FC<SectionItemCardProps> = ({
   section,
   icon,
@@ -29,8 +37,13 @@ export const SectionItemCard: React.FC<SectionItemCardProps> = ({
   const t = useI18n();
   const tsp = useScopedI18n('structurePanel');
   const th = useScopedI18n('header');
-  const displayTitle = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.') 
-    ? t(section.title as any) 
+  const isI18nKey =
+    typeof section.title === 'string' &&
+    (section.title.startsWith('defaultSections.') || section.title.startsWith('sectionTypes.')) &&
+    isValidI18nKey(section.title, t);
+
+  const displayTitle = isI18nKey
+    ? t(section.title as any, {})
     : section.title;
 
 
