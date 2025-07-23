@@ -95,6 +95,51 @@ npm run build
 npm start
 ```
 
+## 🐳 Running with Docker
+
+For a quick and isolated start, you can run the application using the official Docker image available on Docker Hub.
+
+### Prerequisites
+* Docker Desktop installed and running.
+
+### Quick Start
+
+1. **Pull the image from Docker Hub:**
+   ```bash
+   docker pull ilanamin/ctf-writeup-builder:1.0
+   ```
+
+2. **Run the container:**
+   ```bash
+   docker run -d -p 3000:3000 --name ctf-app ilanamin/ctf-writeup-builder:1.0
+   ```
+
+3. **Open the application:**
+   Navigate to `http://localhost:3000` in your web browser.
+
+### Docker Commands
+
+* **Stop the container:**
+  ```bash
+  docker stop ctf-app
+  ```
+
+* **Start the container again:**
+  ```bash
+  docker start ctf-app
+  ```
+
+* **View logs:**
+  ```bash
+  docker logs ctf-app
+  ```
+
+* **Remove the container:**
+  ```bash
+  docker rm ctf-app
+  ```
+
+
 ## 💡 How to Use
 
 ### 1. **Configure AI (Optional)**
