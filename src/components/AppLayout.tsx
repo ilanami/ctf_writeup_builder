@@ -38,8 +38,6 @@ import HelpModal from './HelpModal';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 
-const USER_GOOGLE_AI_API_KEY_NAME = 'USER_GOOGLE_AI_API_KEY';
-
 
 if (typeof window !== 'undefined') {
   if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
@@ -103,7 +101,8 @@ const AppHeader: React.FC = () => {
   };
 
   const handleDeleteApiKey = () => {
-    localStorage.removeItem(USER_GOOGLE_AI_API_KEY_NAME);
+    localStorage.removeItem('aiApiKey');
+    localStorage.removeItem('aiProvider');
     setApiKeyConfig({ provider: 'gemini', apiKey: '' });
     setIsApiKeyModalOpen(false);
     toast({ title: tai('apiKeyDeletedTitle'), description: tai('apiKeyDeletedDescription') });
