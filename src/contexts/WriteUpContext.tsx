@@ -66,7 +66,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       newState = { ...state, writeUp: loadedWriteUp, isDirty: false, activeSectionId: (loadedWriteUp.sections.find(s => !s.isTemplate)?.id) || (loadedWriteUp.sections[0]?.id) || null };
       break;
     case 'UPDATE_GENERAL_INFO':
-      newState = { ...state, writeUp: { ...state.writeUp, ...action.payload } };
+      newState = { ...newState, writeUp: { ...state.writeUp, ...action.payload } };
       break;
     case 'ADD_SECTION':
       if (action.payload.isTemplate) {
@@ -79,7 +79,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
           isTemplate: true,
         };
         newState = {
-          ...state,
+          ...newState,
           writeUp: {
             ...state.writeUp,
             sections: [...state.writeUp.sections, newSection],
@@ -89,7 +89,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       } else {
         const newSection = createDefaultSection(action.payload.type, action.payload.title, action.payload.t);
         newState = {
-          ...state,
+          ...newState,
           writeUp: {
             ...state.writeUp,
             sections: [...state.writeUp.sections, newSection],
@@ -101,7 +101,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
     case 'ADD_PREBUILT_SECTION':
       const prebuiltSectionWithNewId = sanitizeSection({ ...action.payload, id: uuidv4(), isTemplate: false });
       newState = {
-        ...state,
+        ...newState,
         writeUp: {
           ...state.writeUp,
           sections: [...state.writeUp.sections, prebuiltSectionWithNewId],
@@ -116,7 +116,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
         isTemplate: false, 
       }));
       newState = {
-        ...state,
+        ...newState,
         writeUp: {
           ...state.writeUp,
           sections: [...state.writeUp.sections, ...newSectionsWithNewIds],
@@ -126,7 +126,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       break;
     case 'UPDATE_SECTION':
       newState = {
-        ...state,
+        ...newState,
         writeUp: {
           ...state.writeUp,
           sections: state.writeUp.sections.map((s) =>
@@ -144,13 +144,12 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
         newActiveSectionId = firstUserSection ? firstUserSection.id : (firstSectionOverall ? firstSectionOverall.id : null);
       }
       newState = {
-        ...state,
+        ...newState,
         writeUp: {
           ...state.writeUp,
           sections: remainingSections,
         },
         activeSectionId: newActiveSectionId,
-        isDirty: true,
       };
       // Guardado inmediato en localStorage para evitar que la sección reaparezca tras recargar
       try {
@@ -163,11 +162,11 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       }
       break;
     case 'REORDER_SECTIONS':
-      newState = { ...state, writeUp: { ...state.writeUp, sections: action.payload.map(sanitizeSection) } };
+      newState = { ...newState, writeUp: { ...state.writeUp, sections: action.payload.map(sanitizeSection) } };
       break;
     case 'ADD_SCREENSHOT_TO_SECTION':
       newState = {
-        ...state,
+        ...newState,
         writeUp: {
           ...state.writeUp,
           sections: state.writeUp.sections.map((s) =>
@@ -180,7 +179,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       break;
     case 'DELETE_SCREENSHOT_FROM_SECTION':
       newState = {
-        ...state,
+        ...newState,
         writeUp: {
           ...state.writeUp,
           sections: state.writeUp.sections.map((s) =>
@@ -192,13 +191,13 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       };
       break;
     case 'SET_MACHINE_IMAGE':
-      newState = { ...state, writeUp: { ...state.writeUp, machineImage: action.payload } };
+      newState = { ...newState, writeUp: { ...state.writeUp, machineImage: action.payload } };
       break;
     case 'SET_ACTIVE_SECTION':
-      newState = { ...state, activeSectionId: action.payload, isDirty: false }; 
+      newState = { ...state, activeSectionId: action.payload };
       break;
     case 'SET_VIEW':
-      newState = { ...state, currentView: action.payload, isDirty: false }; 
+      newState = { ...state, currentView: action.payload };
       break;
     case 'RESET_WRITEUP':
       const defaultWriteUp = createDefaultWriteUp(); 
@@ -214,7 +213,7 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
     case 'COMMIT_SUGGESTED_SECTION_EDIT': {
       const prebuiltSectionWithNewId = sanitizeSection({ ...action.payload, id: uuidv4(), isTemplate: false });
       newState = {
-        ...state,
+        ...newState,
         editingSuggestedSection: null,
         writeUp: {
           ...state.writeUp,
@@ -271,8 +270,7 @@ export const WriteUpProvider = ({ children }: { children: ReactNode }) => {
       try {
         const timeoutId = setTimeout(() => {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.writeUp));
-          dispatch({ type: 'SET_IS_DIRTY', payload: false }); 
-          console.log("Draft saved to localStorage");
+          dispatch({ type: 'SET_IS_DIRTY', payload: false });
         }, 1000); 
         return () => clearTimeout(timeoutId);
       } catch (error) {
