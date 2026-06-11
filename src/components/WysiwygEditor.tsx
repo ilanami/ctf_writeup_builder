@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+"use client";
+import React, { useEffect, useRef } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
+import { marked } from 'marked';
 import { Button } from '@/components/ui/button';
 import { Bold, Italic, Link2, Underline as UnderlineIcon, Code2, Code, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,6 +20,12 @@ interface WysiwygEditorProps {
   id?: string;
 }
 
+const prepareContent = (content: string): string => {
+  if (!content) return '';
+  if (content.startsWith('<')) return content;
+  return marked.parse(content) as string;
+};
+
 export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   value,
   onChange,
@@ -26,14 +34,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   className,
   id = 'wysiwyg-editor',
 }) => {
-  const processTemplateContent = (content: string) => {
-    if (!content) return '';
-    return content
-      .replace(/\n\n/g, '</p><p>')  // Double line breaks = new paragraphs
-      .replace(/\n/g, '<br>')      // Single line breaks = <br> tags
-      .replace(/^/, '<p>')         // Start with paragraph
-      .replace(/$/, '</p>');       // End with paragraph
-  };
+  const isInternalChange = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -43,8 +44,9 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder }),
     ],
-    content: processTemplateContent(value),
+    content: prepareContent(value),
     onUpdate: ({ editor }) => {
+      isInternalChange.current = true;
       onChange(editor.getHTML());
     },
     editorProps: {
@@ -57,8 +59,12 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   });
 
   useEffect(() => {
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(processTemplateContent(value) || '', false);
+      editor.commands.setContent(prepareContent(value) || '', false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
@@ -85,4 +91,4 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
   );
 };
 
-export default WysiwygEditor; 
+export default WysiwygEditor;
