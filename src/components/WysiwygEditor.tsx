@@ -54,6 +54,16 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         class: 'min-h-[200px] p-2 focus:outline-none prose prose-invert bg-background text-foreground rounded-b-md',
         id,
       },
+      handleClick(_view, _pos, event) {
+        const target = event.target as HTMLElement;
+        const link = target.closest('a');
+        if (link?.href) {
+          event.preventDefault();
+          window.open(link.href, '_blank', 'noopener,noreferrer');
+          return true;
+        }
+        return false;
+      },
     },
     immediatelyRender: false,
   });
@@ -82,8 +92,10 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
         <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleCode().run()} className={editor.isActive('code') ? 'bg-accent' : ''} title="Código en línea (Ctrl+E)"><Code size={16} /></Button>
         <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive('bulletList') ? 'bg-accent' : ''} title="Lista de viñetas"><List size={16} /></Button>
         <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => {
-          const url = window.prompt('URL del enlace');
-          if (url) editor.chain().focus().setLink({ href: url }).run();
+          const raw = window.prompt('URL del enlace');
+          if (!raw) return;
+          const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+          editor.chain().focus().setLink({ href: url }).run();
         }} className={editor.isActive('link') ? 'bg-accent' : ''} title="Enlace"><Link2 size={16} /></Button>
       </div>
       <EditorContent editor={editor} />
