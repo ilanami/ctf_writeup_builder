@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { SectionType, WriteUpSection, WriteUp, Screenshot, AiProcessedSection } from '@/lib/types';
+import type { SectionType, WriteUpSection, WriteUp, Screenshot } from '@/lib/types';
 import { SECTION_TYPES_KEYS, getSectionItemIcon, LOCAL_STORAGE_KEY, createDefaultSection, DEFAULT_SECTIONS_TEMPLATE_KEYS } from '@/lib/constants';
 import { SectionItemCard } from './SectionItemCard';
 import { ScrollArea } from './ui/scroll-area';
@@ -30,11 +29,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { processPdf as processPdfWithAIModels, PdfInput, AiPdfParseOutput } from '@/ai/flows/pdf-processor-flow';
-import { extractBasicTextFromPDF } from '../utils/pdfExtractorBasic';
 import { extractTextAndImagesWithPdfJSEnhanced } from '../utils/pdfExtractorEnhanced';
 import ApiKeyConfigModal from './ApiKeyConfigModal';
 import AboutModal from './AboutModal';
 import HelpModal from './HelpModal';
+// @ts-ignore – react-beautiful-dnd lacks types; migración a @dnd-kit pendiente (BUG-08)
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 
@@ -95,7 +94,7 @@ const AppHeader: React.FC = () => {
     setApiKeyConfig({ provider: savedProvider, apiKey });
   }, [isApiKeyModalOpen]);
 
-  const handleSaveApiKey = ({ provider, apiKey }) => {
+  const handleSaveApiKey = ({ provider, apiKey }: { provider: string; apiKey: string }) => {
     setApiKeyConfig({ provider, apiKey });
     setIsApiKeyModalOpen(false);
   };
@@ -116,13 +115,13 @@ const AppHeader: React.FC = () => {
   const handleExportMd = () => {
     const sectionsToExport = writeUp.sections.filter(section => !section.isTemplate);
     const writeUpTitleKey = writeUp.title || 'generalInfo.defaultWriteupTitle';
-    const writeUpTitleText = writeUp.title?.startsWith('generalInfo.') 
-      ? t(writeUpTitleKey as any) 
-      : (writeUp.title || t('generalInfo.defaultWriteupTitle'));
+    const writeUpTitleText = writeUp.title?.startsWith('generalInfo.')
+      ? t(writeUpTitleKey as any, {})
+      : (writeUp.title || t('generalInfo.defaultWriteupTitle' as any, {}));
     const writeUpAuthorKey = writeUp.author || 'generalInfo.defaultAuthor';
-    const writeUpAuthorText = writeUp.author?.startsWith('generalInfo.') 
-      ? t(writeUpAuthorKey as any) 
-      : (writeUp.author || t('generalInfo.defaultAuthor'));
+    const writeUpAuthorText = writeUp.author?.startsWith('generalInfo.')
+      ? t(writeUpAuthorKey as any, {})
+      : (writeUp.author || t('generalInfo.defaultAuthor' as any, {}));
 
     // Validaciones detalladas
     if (!writeUpTitleText || !writeUpTitleText.trim()) {
@@ -188,11 +187,11 @@ const AppHeader: React.FC = () => {
       }
       
       sectionsToExport.forEach((section: WriteUpSection, index: number) => {
-        const sectionTitle = section.isTemplate && section.title?.startsWith('defaultSections.') 
-          ? t(section.title as any) 
+        const sectionTitle = section.isTemplate && section.title?.startsWith('defaultSections.')
+          ? t(section.title as any, {})
           : section.title;
-        const sectionContent = section.isTemplate && section.content?.startsWith('defaultSectionsContent.') 
-          ? t(section.content as any) 
+        const sectionContent = section.isTemplate && section.content?.startsWith('defaultSectionsContent.')
+          ? t(section.content as any, {})
           : section.content;
         
         mdContent += `## ${sectionTitle}\n\n`;
@@ -510,7 +509,7 @@ const AppHeader: React.FC = () => {
       const link = document.createElement('a');
       link.href = url;
       const writeUpTitleKey = writeUp.title || 'generalInfo.defaultWriteupTitle';
-      const writeUpTitleText = writeUp.title?.startsWith('generalInfo.') ? t(writeUpTitleKey as any) : (writeUp.title || t('generalInfo.defaultWriteupTitle'));
+      const writeUpTitleText = writeUp.title?.startsWith('generalInfo.') ? t(writeUpTitleKey as any, {}) : (writeUp.title || t('generalInfo.defaultWriteupTitle' as any, {}));
       const fileName = (writeUpTitleText).replace(/\s+/g, '_').toLowerCase();
       link.download = `${fileName}_backup.json`;
       document.body.appendChild(link);
@@ -559,7 +558,7 @@ const AppHeader: React.FC = () => {
 
   const confirmLocaleChange = () => {
     if (pendingLocale) {
-      changeLocale(pendingLocale);
+      changeLocale(pendingLocale as 'en' | 'es');
       setShowLangDialog(false);
       setPendingLocale(null);
     }
@@ -615,7 +614,7 @@ const AppHeader: React.FC = () => {
       toast({ title: tt('success'), description: tt('jsonSectionsImported') });
     } else {
       importedData.sections = [
-        ...importedData.sections.filter(s => !s.isTemplate),
+        ...importedData.sections.filter((s: WriteUpSection) => !s.isTemplate),
         ...templateSections
       ];
       dispatch({ type: 'LOAD_WRITEUP', payload: importedData });
@@ -781,7 +780,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   const t = useI18n();
 
   const handleAddSection = (type: SectionType) => {
-    const tempSection = createDefaultSection(type, undefined, t);
+    const tempSection = createDefaultSection(type, undefined, t as unknown as (key: string) => string);
     dispatch({ type: 'SET_EDITING_SUGGESTED_SECTION', payload: { ...tempSection, isTemplate: true } });
   };
 
@@ -822,16 +821,16 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                 {/* DRAG & DROP: Secciones de usuario */}
                 <DragDropContext onDragEnd={handleDragEnd}>
                   <Droppable droppableId="userSections-droppable" direction="vertical">
-                    {(provided) => (
+                    {(provided: any) => (
                       <div {...provided.droppableProps} ref={provided.innerRef} style={{ width: '100%' }}>
                         {userSections.map((section, index) => {
                           const Icon = getSectionItemIcon(section.type, section.title);
                           const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
-                          const displayTitle = isI18nKey ? t(section.title as any) : section.title;
+                          const displayTitle = isI18nKey ? t(section.title as any, {}) : section.title;
                           const description = section.type ? tst(`${section.type}.description` as any) : '';
                           return (
                             <Draggable key={section.id} draggableId={section.id} index={index}>
-                              {(provided, snapshot) => (
+                              {(provided: any, snapshot: any) => (
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
@@ -865,29 +864,6 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                 </DragDropContext>
                 {/* FIN DRAG & DROP */}
 
-                {/* CÓDIGO ANTERIOR (sin drag & drop) - dejar comentado por si hay que volver atrás */}
-                {false && userSections.length > 0 ? (
-                  userSections.map((section) => {
-                    const Icon = getSectionItemIcon(section.type, section.title);
-                    const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
-                    const displayTitle = isI18nKey ? t(section.title as any) : section.title;
-                    const description = section.type ? tst(`${section.type}.description` as any) : '';
-                    return (
-                      <SectionItemCard
-                        key={section.id}
-                        section={section}
-                        icon={<Icon className="mr-2 h-5 w-5 mt-0.5 flex-shrink-0 text-foreground" />}
-                        isActive={section.id === activeSectionId}
-                        onSelect={() => handleSelectSection(section.id)}
-                        onDelete={() => handleDeleteSection(section.id)}
-                        className=""
-                      />
-                    );
-                  })
-                ) : (
-                  <p className="text-center text-muted-foreground py-4">{tsp('noSectionsYet')}</p>
-                )}
-                {/* FIN CÓDIGO ANTERIOR */}
               </div>
             </ScrollArea>
           </AccordionContent>
@@ -907,7 +883,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                   <>
                     {templateSections.map((section) => {
                        const Icon = getSectionItemIcon(section.type, section.title);
-                       const displayTitle = t(section.title as any);
+                       const displayTitle = t(section.title as any, {});
                        return (
                          <SectionItemCard
                           key={section.id}
