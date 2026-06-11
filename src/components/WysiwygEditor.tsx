@@ -75,13 +75,13 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     <div className={cn('w-full', className)}>
       {label && <label htmlFor={id} className="block mb-1 font-bold">{label}</label>}
       <div className="flex items-center space-x-1 p-1 border-b border-t border-border bg-muted mb-0 rounded-t-md">
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'bg-accent' : ''} title="Negrita (Ctrl+B)"><Bold size={16} /></Button>
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'bg-accent' : ''} title="Cursiva (Ctrl+I)"><Italic size={16} /></Button>
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'bg-accent' : ''} title="Subrayado (Ctrl+U)"><UnderlineIcon size={16} /></Button>
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={editor.isActive('codeBlock') ? 'bg-accent' : ''} title="Bloque de código (Ctrl+Alt+C)"><Code2 size={16} /></Button>
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleCode().run()} className={editor.isActive('code') ? 'bg-accent' : ''} title="Código en línea (Ctrl+E)"><Code size={16} /></Button>
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive('bulletList') ? 'bg-accent' : ''} title="Lista de viñetas"><List size={16} /></Button>
-        <Button variant="ghost" size="icon" onClick={() => {
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'bg-accent' : ''} title="Negrita (Ctrl+B)"><Bold size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'bg-accent' : ''} title="Cursiva (Ctrl+I)"><Italic size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'bg-accent' : ''} title="Subrayado (Ctrl+U)"><UnderlineIcon size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={editor.isActive('codeBlock') ? 'bg-accent' : ''} title="Bloque de código (Ctrl+Alt+C)"><Code2 size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleCode().run()} className={editor.isActive('code') ? 'bg-accent' : ''} title="Código en línea (Ctrl+E)"><Code size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBulletList().run()} className={editor.isActive('bulletList') ? 'bg-accent' : ''} title="Lista de viñetas"><List size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => {
           const url = window.prompt('URL del enlace');
           if (url) editor.chain().focus().setLink({ href: url }).run();
         }} className={editor.isActive('link') ? 'bg-accent' : ''} title="Enlace"><Link2 size={16} /></Button>
