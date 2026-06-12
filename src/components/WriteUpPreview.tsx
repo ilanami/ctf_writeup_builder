@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import { useWriteUp } from '@/hooks/useWriteUp';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { marked } from 'marked';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea as CustomScrollArea } from '@/components/ui/scroll-area'; // Changed import alias
 import { Badge } from '@/components/ui/badge';
@@ -128,40 +127,34 @@ export const WriteUpPreview: React.FC = () => {
             </span>
           </div>
         ) : (
-          <CardContent className="p-6 prose prose-sm md:prose-base dark:prose-invert max-w-none 
-                                  prose-headings:text-foreground prose-headings:font-bold 
-                                  prose-strong:text-foreground 
-                                  prose-a:text-foreground prose-a:font-bold hover:prose-a:text-accent-foreground 
-                                  prose-code:text-foreground prose-code:font-semibold
-                                  prose-pre:bg-muted prose-pre:text-foreground 
-                                  prose-blockquote:border-foreground prose-blockquote:text-muted-foreground">
+          <CardContent className="p-4 md:p-6 max-w-none">
             {writeUp.machineImage && (
-              <div className="my-6">
-                <h2 className="text-xl font-semibold text-foreground">{tg('machineImage')}</h2>
+              <div className="my-3">
+                <h2 className="text-lg font-semibold text-foreground mb-2">{tg('machineImage')}</h2>
                 <Image
                   src={writeUp.machineImage.dataUrl}
                   alt={t(writeUp.machineImage.name as any, {}) || tg('machineImage')}
                   width={600}
                   height={400}
                   className="rounded-md border border-border shadow-md object-contain"
-                  data-ai-hint="server security" 
+                  data-ai-hint="server security"
                 />
               </div>
             )}
-            
+
             {sectionsToPreview.length > 0 && (
               <>
-                <Separator className="my-8" />
-                <div id="table-of-contents" className="mb-8 p-4 border border-border rounded-md bg-card/30 not-prose">
-                  <h3 className="text-xl font-semibold text-foreground mb-3 flex items-center">
-                    <ListChecks className="mr-2 h-6 w-6" />
+                <Separator className="my-4" />
+                <div id="table-of-contents" className="mb-4 p-3 border border-border rounded-md bg-card/30 not-prose">
+                  <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
+                    <ListChecks className="mr-2 h-5 w-5" />
                     {tp('tableOfContents')}
                   </h3>
-                  <ol className="list-decimal list-inside space-y-1">
+                  <ol className="list-decimal list-inside space-y-0.5">
                     {sectionsToPreview.map((section: WriteUpSection) => (
                       <li key={section.id}>
-                        <a 
-                          href={`#section-preview-accordion-trigger-${section.id}`} 
+                        <a
+                          href={`#section-preview-accordion-trigger-${section.id}`}
                           className="text-foreground hover:text-accent-foreground hover:underline"
                         >
                           {t(section.title as any, {})}
@@ -173,7 +166,7 @@ export const WriteUpPreview: React.FC = () => {
               </>
             )}
 
-            <Separator className="my-8" />
+            <Separator className="my-4" />
 
             <Accordion type="multiple" defaultValue={defaultExpandedSectionIds} className="w-full">
               {sectionsToPreview.map((section: WriteUpSection, index: number) => {
@@ -184,10 +177,14 @@ export const WriteUpPreview: React.FC = () => {
                 const accordionItemId = `section-preview-accordion-${section.id}`;
                 const accordionTriggerId = `section-preview-accordion-trigger-${section.id}`;
 
-                // SSR safety for DOMPurify
-                const sanitizedContent = typeof window !== 'undefined'
-                  ? DOMPurify.sanitize(sectionContent)
+                // Convert markdown to HTML if content isn't already HTML, then sanitize
+                const htmlContent = sectionContent && !sectionContent.trim().startsWith('<')
+                  ? marked.parse(sectionContent) as string
                   : sectionContent;
+                // Always sanitize — DOMPurify on client, escape HTML on SSR fallback
+                const sanitizedContent = typeof window !== 'undefined'
+                  ? DOMPurify.sanitize(htmlContent)
+                  : htmlContent.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
                 return (
                   <AccordionItem value={accordionItemId} key={section.id} id={accordionItemId}>
@@ -198,7 +195,7 @@ export const WriteUpPreview: React.FC = () => {
                       </h2>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <article className="mb-12">
+                      <article className="mb-4">
                         {section.type === 'pregunta' && section.answer && (
                           <p className="italic text-muted-foreground"><strong>{ta('answerToQuestion')}:</strong> {section.answer}</p>
                         )}
@@ -206,7 +203,22 @@ export const WriteUpPreview: React.FC = () => {
                           <p className="font-mono p-2 bg-muted rounded text-foreground font-bold"><strong>{ta('flagValue')}:</strong> {section.flagValue}</p>
                         )}
                         <div
-                          className="prose prose-green prose-invert max-w-none"
+                          className="prose prose-sm prose-green prose-invert max-w-none
+                                      prose-headings:mt-3 prose-headings:mb-1.5
+                                      prose-h1:mt-4 prose-h1:mb-2 prose-h1:text-xl
+                                      prose-h2:mt-3 prose-h2:mb-1.5 prose-h2:text-lg
+                                      prose-h3:mt-2 prose-h3:mb-1 prose-h3:text-base
+                                      prose-h4:mt-2 prose-h4:mb-1 prose-h4:text-sm
+                                      prose-p:my-1.5
+                                      prose-pre:my-2
+                                      prose-ul:my-1.5 prose-ol:my-1.5
+                                      prose-li:my-0.5
+                                      prose-strong:text-foreground
+                                      prose-a:text-foreground prose-a:font-bold hover:prose-a:text-accent-foreground
+                                      prose-code:text-foreground prose-code:font-semibold
+                                      prose-pre:bg-muted prose-pre:text-foreground
+                                      prose-blockquote:border-foreground prose-blockquote:text-muted-foreground
+                                      prose-blockquote:my-2"
                           dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                         />
                         {section.screenshots && section.screenshots.length > 0 && (

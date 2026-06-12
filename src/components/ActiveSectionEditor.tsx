@@ -10,6 +10,8 @@ import { WysiwygEditor } from './WysiwygEditor';
 import { ImageUploader } from './ImageUploader';
 import { Button } from '@/components/ui/button';
 import { Trash2, Loader2, ClipboardCopy, XCircle, Wand2, PlusCircle } from 'lucide-react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // import { suggestSectionContent } from '@/ai/flows/section-suggester-flow'; // Comentado para usar API Key del usuario
@@ -138,19 +140,28 @@ export const ActiveSectionEditor: React.FC = () => {
 
   const handleAddToStructure = () => {
     if (!editingSuggestedSection) return;
-    let cleanContent = editingSuggestedSection.content;
-    if (typeof cleanContent === 'string') {
-      const lines = cleanContent.split('\n');
+    let content = editableContent;
+
+    // If content is still raw markdown (user didn't edit), convert to HTML
+    if (content && !content.trim().startsWith('<')) {
+      const lines = content.split('\n');
       if (lines[0].trim().startsWith('##')) {
         lines.shift();
-        cleanContent = lines.join('\n').replace(/^\n+/, '');
+        content = lines.join('\n').replace(/^\n+/, '');
       }
+      content = marked.parse(content) as string;
     }
+
+    // Sanitize HTML before storing — defense in depth
+    if (typeof window !== 'undefined') {
+      content = DOMPurify.sanitize(content);
+    }
+
     const newSection = {
       ...editingSuggestedSection,
       isTemplate: false,
       title: editableTitle,
-      content: editableContent,
+      content,
     };
     dispatch({ type: 'COMMIT_SUGGESTED_SECTION_EDIT', payload: newSection });
   };

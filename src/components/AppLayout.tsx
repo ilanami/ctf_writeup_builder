@@ -949,11 +949,13 @@ export const AppLayout: React.FC = () => {
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background border-t-4 border-b-4 border-l-4 border-[#00ff00]">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-[320px] min-w-[300px] max-w-[340px] h-full overflow-y-auto bg-card border-r-4 border-[#00ff00] shadow-md">
-          <GeneralInfoPanel />
-        </aside>
+        {currentView === 'editor' && (
+          <aside className="w-[320px] min-w-[300px] max-w-[340px] h-full overflow-y-auto bg-card border-r-4 border-[#00ff00] shadow-md">
+            <GeneralInfoPanel />
+          </aside>
+        )}
 
-        <main className="flex-1 h-full overflow-y-auto p-0 max-w-[calc(100%-720px)]">
+        <main className={`flex-1 h-full overflow-y-auto p-0 ${currentView === 'editor' ? 'max-w-[calc(100%-720px)]' : 'w-full'}`}>
           {currentView === 'editor' ? <ActiveSectionEditor /> : <WriteUpPreview />}
         </main>
 
