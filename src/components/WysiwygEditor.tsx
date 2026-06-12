@@ -51,7 +51,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     },
     editorProps: {
       attributes: {
-        class: 'min-h-[200px] p-2 focus:outline-none prose prose-sm prose-invert bg-background text-foreground rounded-b-md',
+        class: 'min-h-[200px] p-2 focus:outline-none prose prose-sm bg-background text-foreground rounded-b-md',
         id,
       },
       handleClick(_view, _pos, event) {

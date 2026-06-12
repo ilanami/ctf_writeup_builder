@@ -191,7 +191,7 @@ export const WriteUpPreview: React.FC = () => {
                           <p className="font-mono p-2 bg-muted rounded text-foreground font-bold"><strong>{ta('flagValue')}:</strong> {section.flagValue}</p>
                         )}
                         <div
-                          className="prose prose-sm prose-green prose-invert max-w-none
+                          className="prose prose-sm max-w-none
                                       prose-headings:mt-3 prose-headings:mb-1.5
                                       prose-h1:mt-4 prose-h1:mb-2 prose-h1:text-xl
                                       prose-h2:mt-3 prose-h2:mb-1.5 prose-h2:text-lg
