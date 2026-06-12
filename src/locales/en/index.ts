@@ -43,6 +43,11 @@ export default {
     themeHacker: 'Hacker Theme',
     themeDark: 'Dark Theme',
     themeLight: 'Light Theme',
+    menuArchivo: 'File',
+    menuEdicion: 'Edit',
+    menuIdioma: 'Language',
+    menuAyuda: 'Help',
+    temas: 'Themes',
   },
   structurePanel: {
     structure: 'STRUCTURE',

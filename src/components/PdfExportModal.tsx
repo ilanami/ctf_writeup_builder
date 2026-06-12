@@ -315,10 +315,17 @@ const SIMPLE_PDF_THEMES_CONFIG = {
   Dark: PDF_THEMES_CONFIG['Hacker'],
 };
 
-export const PdfExportModal: React.FC = () => {
+interface PdfExportModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOpen, onOpenChange: externalOnOpenChange }) => {
   const { state } = useWriteUp();
   const { writeUp } = state;
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = externalOpen ?? internalOpen;
+  const setIsOpen = externalOnOpenChange ?? setInternalOpen;
   const [theme, setTheme] = useState<'Light' | 'Dark'>('Dark');
   const { toast } = useToast();
   const exportContentRef = useRef<HTMLDivElement>(null);
@@ -687,17 +694,6 @@ export const PdfExportModal: React.FC = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"
-        >
-          <FileSpreadsheet className="mr-1 h-3 w-3 icon-glow" />
-          {tPdfModal('exportButton')}
-        </Button>
-      </DialogTrigger>
-      
       <DialogContent className="max-w-[950px] w-full h-[95vh] p-0 m-0 flex flex-col bg-background text-foreground border-2 border-border border-glow" style={{ boxShadow: 'none' }}>
         <DialogHeader className="px-4 py-3 flex flex-row justify-between items-center" style={{ borderBottom: 'none', borderTop: 'none' }}>
           <DialogTitle className="text-lg font-bold flex items-center text-glow">

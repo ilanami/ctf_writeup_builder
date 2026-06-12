@@ -1,16 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GeneralInfoPanel } from './GeneralInfoPanel';
 import { ActiveSectionEditor } from './ActiveSectionEditor';
 import { WriteUpPreview } from './WriteUpPreview';
 import { useWriteUp } from '@/hooks/useWriteUp';
 import { Button } from './ui/button';
-import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info, Terminal, Moon, Sun } from 'lucide-react';
+import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info, Terminal, Moon, Sun, FolderOpen, Pencil, FileDown, Palette } from 'lucide-react';
 import { useAppTheme } from '@/contexts/ThemeContext';
 import { PdfExportModal } from './PdfExportModal';
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+  DropdownMenuRadioGroup, DropdownMenuRadioItem,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { SectionType, WriteUpSection, WriteUp, Screenshot } from '@/lib/types';
@@ -81,9 +87,14 @@ const AppHeader: React.FC = () => {
   const [apiKeyConfig, setApiKeyConfig] = useState({ provider: 'gemini', apiKey: '' });
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [pendingImport, setPendingImport] = useState<any>(null);
   const [pendingImportType, setPendingImportType] = useState<'json' | 'md' | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const importJsonRef = useRef<HTMLInputElement>(null);
+  const importMdRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -567,6 +578,11 @@ const AppHeader: React.FC = () => {
     setShowLangDialog(true);
   };
 
+  const handleLocaleChangeFromMenu = (locale: string) => {
+    setPendingLocale(locale);
+    setShowLangDialog(true);
+  };
+
   const confirmLocaleChange = () => {
     if (pendingLocale) {
       changeLocale(pendingLocale as 'en' | 'es');
@@ -637,6 +653,7 @@ const AppHeader: React.FC = () => {
   };
 
   return (
+    <>
     <header className="flex flex-row items-start p-1 sm:p-2 border-b-4 border-l-4 border-r-4 border-border border-glow bg-background sticky top-0 z-10">
       <div className="flex items-center mb-1 sm:mb-0">
         <TerminalSquare className="h-8 w-8 sm:h-8 sm:w-8 text-foreground mr-1 sm:mr-2" />
@@ -644,178 +661,226 @@ const AppHeader: React.FC = () => {
           <span>{t('appTitle')} {'>'}</span><span className="blinking-cursor">_</span>
         </h1>
       </div>
-      <div className="flex flex-col gap-y-4 ml-12 w-full max-w-[calc(100%-350px)]">
-        <div className="flex flex-wrap gap-x-2 gap-y-1">
-          {/* Fila superior: Nuevo, Guardar, Vista Previa/Editor, Exportar MD, Exportar PDF, API Key, Acerca de */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" className="btn-glow h-6 sm:h-7 px-2 text-[0.75rem] sm:text-[0.85rem] uppercase tracking-wider">
-                <PlusCircle className="mr-1 h-3.5 w-3.5 icon-glow" /> {th('new')}
+      <div className="flex items-center gap-2 ml-4">
+          {/* Archivo */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="btn-glow">
+                <FolderOpen className="mr-1.5 h-4 w-4 icon-glow" />
+                {th('menuArchivo')}
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{th('newWriteupTitle')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {th('newWriteupDescription')}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="font-bold">{th('cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleNewWriteUp} className="bg-foreground text-primary-foreground font-bold">{th('continue')}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button onClick={handleSaveProgress} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"><Save className="mr-1 h-3 w-3 icon-glow" /> {th('save')}</Button>
-          <Button onClick={toggleView} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-            {currentView === 'editor' ? <Eye className="mr-1 h-3 w-3 icon-glow" /> : <Edit3 className="mr-1 h-3 w-3 icon-glow" />}
-            {currentView === 'editor' ? th('preview') : th('editor')}
-          </Button>
-          <Button onClick={handleExportMd} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"><FileText className="mr-1 h-3 w-3 icon-glow" /> {th('exportMD')}</Button>
-          <PdfExportModal />
-          <Button onClick={() => setIsApiKeyModalOpen(true)} variant="outline" size="sm" title={tai('configureApiKeyButton')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-            <KeyRound className="mr-1 h-3 w-3 icon-glow" /> {th('configureApiKey')}
-          </Button>
-          <Button onClick={() => setIsAboutOpen(true)} variant="outline" size="sm" title={t('about.title')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-            <Info className="mr-1 h-3 w-3 icon-glow" /> {t('about.title')}
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-x-2 gap-y-1 mt-0">
-          {/* Fila inferior: Idioma, Importar, Backup, Donar, Ayuda, Temas */}
-          <Button onClick={handleLocaleChange} variant="outline" size="sm" title={th('toggleLanguage')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-            <Languages className="mr-1 h-3 w-3 icon-glow" />
-            {currentLocale === 'es' ? th('switchToEnglish') : th('switchToSpanish')}
-          </Button>
-          <label htmlFor="import-json-input-header" className="mb-0">
-            <Button variant="outline" size="sm" asChild className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-              <span><Upload className="mr-1 h-3 w-3 icon-glow" /> {th('importJSON')}</span>
-            </Button>
-          </label>
-          <input id="import-json-input-header" type="file" accept=".json" onChange={handleImportJson} className="hidden" />
-          <label htmlFor="import-md-input-header" className="mb-0">
-            <Button variant="outline" size="sm" asChild className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-              <span><FileArchive className="mr-1 h-3 w-3 icon-glow" /> {th('importMD')}</span>
-            </Button>
-          </label>
-          <input id="import-md-input-header" type="file" accept=".md,.txt,text/markdown" onChange={handleImportMdFile} className="hidden" />
-          <Button onClick={handleExportJsonBackup} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"><Download className="mr-1 h-3 w-3 icon-glow" /> {th('backup')}</Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" title={tDonations('title')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-                <Gift className="mr-1 h-3 w-3 icon-glow" /> {th('donateButton')}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-background text-foreground border-border">
+              <DropdownMenuItem onClick={() => setShowNewDialog(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> {th('new')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSaveProgress}>
+                <Save className="mr-2 h-4 w-4" /> {th('save')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => importJsonRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> {th('importJSON')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => importMdRef.current?.click()}>
+                <FileArchive className="mr-2 h-4 w-4" /> {th('importMD')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportMd}>
+                <FileText className="mr-2 h-4 w-4" /> {th('exportMD')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsPdfModalOpen(true)}>
+                <FileDown className="mr-2 h-4 w-4" /> {th('exportPDF')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportJsonBackup}>
+                <Download className="mr-2 h-4 w-4" /> {th('backup')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Edicion */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="btn-glow">
+                <Pencil className="mr-1.5 h-4 w-4 icon-glow" />
+                {th('menuEdicion')}
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{tDonations('title')}</AlertDialogTitle>
-                <AlertDialogDescription className="text-left whitespace-pre-wrap">
-                  {tDonations('message')}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <div className="flex flex-col sm:flex-row gap-2 w-full">
-                  <AlertDialogCancel className="font-bold w-full sm:w-auto">{tDonations('closeButton')}</AlertDialogCancel>
-                  <AlertDialogAction asChild>
-                    <a
-                      href="https://www.paypal.me/1511amff"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-foreground text-primary-foreground hover:bg-foreground/90 h-10 px-4 py-2 font-bold w-full sm:w-auto"
-                    >
-                      {tDonations('donateButtonAction')}
-                    </a>
-                  </AlertDialogAction>
-                  <AlertDialogAction asChild>
-                    <a
-                      href="https://buymeacoffee.com/ilanami"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-400 text-black hover:bg-yellow-300 h-10 px-4 py-2 font-bold w-full sm:w-auto"
-                    >
-                      ☕ Buy Me a Coffee
-                    </a>
-                  </AlertDialogAction>
-                </div>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button onClick={() => setIsHelpOpen(true)} variant="outline" size="sm" title={t('help.title')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
-            <HelpCircle className="mr-1 h-3 w-3 icon-glow" /> {t('help.title')}
-          </Button>
-          {/* Theme switcher */}
-          <div className="flex items-center gap-1 ml-2 border-l border-border pl-2">
-            <Button
-              variant={theme === 'hacker' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTheme('hacker')}
-              className="btn-glow h-6 sm:h-7 w-8 p-0"
-              aria-label={th('themeHacker')}
-              title={th('themeHacker')}
-            >
-              <Terminal className="h-3.5 w-3.5 icon-glow" />
-            </Button>
-            <Button
-              variant={theme === 'dark' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTheme('dark')}
-              className="btn-glow h-6 sm:h-7 w-8 p-0"
-              aria-label={th('themeDark')}
-              title={th('themeDark')}
-            >
-              <Moon className="h-3.5 w-3.5 icon-glow" />
-            </Button>
-            <Button
-              variant={theme === 'light' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTheme('light')}
-              className="btn-glow h-6 sm:h-7 w-8 p-0"
-              aria-label={th('themeLight')}
-              title={th('themeLight')}
-            >
-              <Sun className="h-3.5 w-3.5 icon-glow" />
-            </Button>
-          </div>
-          <span className="sr-only" aria-live="polite">
-            {theme === 'hacker' ? th('themeHacker') : theme === 'dark' ? th('themeDark') : th('themeLight')}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-background text-foreground border-border">
+              <DropdownMenuItem onClick={toggleView}>
+                {currentView === 'editor'
+                  ? <><Eye className="mr-2 h-4 w-4" /> {th('preview')}</>
+                  : <><Edit3 className="mr-2 h-4 w-4" /> {th('editor')}</>}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsApiKeyModalOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" /> {th('configureApiKey')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Idioma */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="btn-glow">
+                <Languages className="mr-1.5 h-4 w-4 icon-glow" />
+                {th('menuIdioma')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-background text-foreground border-border">
+              <DropdownMenuRadioGroup value={currentLocale} onValueChange={handleLocaleChangeFromMenu}>
+                <DropdownMenuRadioItem value="es">🇪🇸 Español</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="en">🇬🇧 English</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Ayuda */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="btn-glow">
+                <HelpCircle className="mr-1.5 h-4 w-4 icon-glow" />
+                {th('menuAyuda')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-background text-foreground border-border">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Palette className="mr-2 h-4 w-4" /> {th('temas')}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-background text-foreground border-border">
+                  <DropdownMenuRadioGroup value={theme} onValueChange={(t) => setTheme(t as 'hacker' | 'dark' | 'light')}>
+                    <DropdownMenuRadioItem value="hacker">
+                      <Terminal className="mr-2 h-4 w-4" /> {th('themeHacker')}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark">
+                      <Moon className="mr-2 h-4 w-4" /> {th('themeDark')}
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="light">
+                      <Sun className="mr-2 h-4 w-4" /> {th('themeLight')}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsHelpOpen(true)}>
+                <HelpCircle className="mr-2 h-4 w-4" /> {t('help.title')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsAboutOpen(true)}>
+                <Info className="mr-2 h-4 w-4" /> {t('about.title')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowDonateDialog(true)}>
+                <Gift className="mr-2 h-4 w-4" /> {th('donateButton')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Auto-save indicator */}
+          <span className="text-xs text-muted-foreground ml-2" aria-live="polite">
+            {state.isDirty ? '● Guardando...' : '✓ Guardado'}
           </span>
         </div>
-      </div>
-      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      {isApiKeyModalOpen && (
-        <ApiKeyConfigModal
-          onSave={handleSaveApiKey}
-          onCancel={() => setIsApiKeyModalOpen(false)}
-        />
-      )}
-      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tImportDialog('title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              <span dangerouslySetInnerHTML={{ __html: tImportDialog('description') }} />
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setShowImportDialog(false); setPendingImport(null); setPendingImportType(null); }}>{tImportDialog('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleImportDialogAction('merge')}>{tImportDialog('addButton')}</AlertDialogAction>
-            <AlertDialogAction onClick={() => handleImportDialogAction('replace')}>{tImportDialog('replaceButton')}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={showLangDialog} onOpenChange={setShowLangDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tLangDialog('title')}</AlertDialogTitle>
-            <AlertDialogDescription>{tLangDialog('description')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelLocaleChange}>{tLangDialog('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLocaleChange}>{tLangDialog('continue')}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Hidden file inputs */}
+      <input ref={importJsonRef} type="file" accept=".json" onChange={handleImportJson} className="hidden" />
+      <input ref={importMdRef} type="file" accept=".md,.txt,text/markdown" onChange={handleImportMdFile} className="hidden" />
     </header>
+
+    {/* Modals rendered outside header */}
+    <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+    <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+    <PdfExportModal open={isPdfModalOpen} onOpenChange={setIsPdfModalOpen} />
+    {isApiKeyModalOpen && (
+      <ApiKeyConfigModal
+        onSave={handleSaveApiKey}
+        onCancel={() => setIsApiKeyModalOpen(false)}
+      />
+    )}
+
+    {/* New Write-up confirmation dialog */}
+    <AlertDialog open={showNewDialog} onOpenChange={setShowNewDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{th('newWriteupTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {th('newWriteupDescription')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="font-bold">{th('cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleNewWriteUp} className="bg-foreground text-primary-foreground font-bold">{th('continue')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Donate dialog */}
+    <AlertDialog open={showDonateDialog} onOpenChange={setShowDonateDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{tDonations('title')}</AlertDialogTitle>
+          <AlertDialogDescription className="text-left whitespace-pre-wrap">
+            {tDonations('message')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <AlertDialogCancel className="font-bold w-full sm:w-auto">{tDonations('closeButton')}</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <a
+                href="https://www.paypal.me/1511amff"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-foreground text-primary-foreground hover:bg-foreground/90 h-10 px-4 py-2 font-bold w-full sm:w-auto"
+              >
+                {tDonations('donateButtonAction')}
+              </a>
+            </AlertDialogAction>
+            <AlertDialogAction asChild>
+              <a
+                href="https://buymeacoffee.com/ilanami"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-yellow-400 text-black hover:bg-yellow-300 h-10 px-4 py-2 font-bold w-full sm:w-auto"
+              >
+                ☕ Buy Me a Coffee
+              </a>
+            </AlertDialogAction>
+          </div>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Import confirmation dialog */}
+    <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{tImportDialog('title')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            <span dangerouslySetInnerHTML={{ __html: tImportDialog('description') }} />
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => { setShowImportDialog(false); setPendingImport(null); setPendingImportType(null); }}>{tImportDialog('cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={() => handleImportDialogAction('merge')}>{tImportDialog('addButton')}</AlertDialogAction>
+          <AlertDialogAction onClick={() => handleImportDialogAction('replace')}>{tImportDialog('replaceButton')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Language switch confirmation dialog */}
+    <AlertDialog open={showLangDialog} onOpenChange={setShowLangDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{tLangDialog('title')}</AlertDialogTitle>
+          <AlertDialogDescription>{tLangDialog('description')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={cancelLocaleChange}>{tLangDialog('cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmLocaleChange}>{tLangDialog('continue')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 
