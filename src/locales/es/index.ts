@@ -156,6 +156,7 @@ export default {
     progressSavedDetails: "Tu write-up ha sido guardado en el navegador.",
     errorSavingProgress: "Error al Guardar",
     couldNotSaveProgress: "No se pudo guardar el progreso.",
+    storageFullError: "El almacenamiento del navegador está lleno. No se puede guardar el borrador. Intenta eliminar datos antiguos o liberar espacio.",
     gistNotImplemented: "La exportación a Gist aún no está implementada.",
   },
    pdfModal: {
@@ -309,6 +310,8 @@ export default {
     apiKeyMissingTitle: "API Key Requerida",
     apiKeyMissingDescription: "Por favor, configura tu API Key de IA para usar esta función.",
     apiKeyMissingDescriptionForPdf: "Por favor, configura tu API Key de IA para intentar el procesamiento de PDF con IA.",
+    errorApiKeyStorageFull: "El almacenamiento del navegador está lleno. No se puede guardar la API Key.",
+    errorApiKeySave: "No se pudo guardar la API Key.",
     currentKey: "Clave actual",
   },
   about: {

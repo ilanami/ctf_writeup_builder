@@ -85,7 +85,13 @@ export const DEFAULT_PDF_EXPORT_OPTIONS: PdfExportOptions = {
   footerText: '',
 };
 
-export const LOCAL_STORAGE_KEY = 'ctfWriteUpBuilder_draft';
+export const STORAGE_KEYS = {
+  writeUp: 'ctfWriteUpBuilder_draft',
+  aiApiKey: 'aiApiKey',
+  aiProvider: 'aiProvider',
+} as const;
+
+export const LOCAL_STORAGE_KEY = STORAGE_KEYS.writeUp;
 
 export const getSectionItemIcon = (type: SectionType, titleKey: string = '') => {
   const lowerTitleKey = titleKey.toLowerCase();

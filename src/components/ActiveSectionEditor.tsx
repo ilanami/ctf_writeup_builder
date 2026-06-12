@@ -12,13 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Trash2, Loader2, ClipboardCopy, XCircle, Wand2, PlusCircle } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { STORAGE_KEYS } from '@/lib/constants';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // import { suggestSectionContent } from '@/ai/flows/section-suggester-flow'; // Comentado para usar API Key del usuario
 import { useToast } from '@/hooks/use-toast';
 import { useI18n, useScopedI18n } from '@/locales/client';
-
-const USER_GOOGLE_AI_API_KEY_NAME = 'USER_GOOGLE_AI_API_KEY';
 
 export const ActiveSectionEditor: React.FC = () => {
   const { state, dispatch } = useWriteUp();
@@ -198,13 +197,18 @@ export const ActiveSectionEditor: React.FC = () => {
     }
 
     // Leer proveedor y clave desde localStorage
-    const provider = localStorage.getItem('aiProvider') || 'gemini';
+    let provider = 'gemini';
     let apiKey = '';
     try {
-      const encrypted = localStorage.getItem('aiApiKey') || '';
-      apiKey = encrypted ? atob(encrypted) : '';
-    } catch {
-      apiKey = localStorage.getItem('aiApiKey') || '';
+      provider = localStorage.getItem(STORAGE_KEYS.aiProvider) || 'gemini';
+      const encrypted = localStorage.getItem(STORAGE_KEYS.aiApiKey) || '';
+      try {
+        apiKey = encrypted ? atob(encrypted) : '';
+      } catch {
+        apiKey = encrypted;
+      }
+    } catch (error) {
+      console.error("Error reading API key from storage:", error);
     }
     if (!apiKey) {
       toast({

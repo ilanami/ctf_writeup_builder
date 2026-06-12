@@ -12,6 +12,7 @@ interface WriteUpState {
   activeSectionId: string | null;
   isDirty: boolean; // To track unsaved changes for localStorage
   editingSuggestedSection?: WriteUpSection | null;
+  saveError: string | null;
 }
 
 type WriteUpAction =
@@ -32,7 +33,8 @@ type WriteUpAction =
   | { type: 'RESET_WRITEUP' }
   | { type: 'SET_IS_DIRTY', payload: boolean }
   | { type: 'SET_EDITING_SUGGESTED_SECTION'; payload: WriteUpSection | null }
-  | { type: 'COMMIT_SUGGESTED_SECTION_EDIT'; payload: WriteUpSection };
+  | { type: 'COMMIT_SUGGESTED_SECTION_EDIT'; payload: WriteUpSection }
+  | { type: 'SAVE_ERROR'; payload: string | null };
 
 const initialState: WriteUpState = {
   writeUp: createDefaultWriteUp(),
@@ -40,6 +42,7 @@ const initialState: WriteUpState = {
   activeSectionId: null,
   isDirty: false,
   editingSuggestedSection: null,
+  saveError: null,
 };
 
 const sanitizeSection = (section: WriteUpSection): WriteUpSection => {
@@ -159,7 +162,8 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
           sections: remainingSections,
         }));
       } catch (e) {
-        console.error('Error saving after DELETE_SECTION:', e);
+        const isQuota = e instanceof DOMException && e.name === 'QuotaExceededError';
+        newState = { ...newState, saveError: isQuota ? 'QuotaExceededError' : String(e) };
       }
       break;
     case 'REORDER_SECTIONS':
@@ -227,6 +231,9 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       };
       break;
     }
+    case 'SAVE_ERROR':
+      newState = { ...state, saveError: action.payload };
+      break;
     default:
       // https://github.com/typescript-eslint/typescript-eslint/issues/6149
       // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
@@ -271,15 +278,16 @@ export const WriteUpProvider = ({ children }: { children: ReactNode }) => {
 
   React.useEffect(() => { // Changed useEffect
     if (state.isDirty) {
-      try {
-        const timeoutId = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        try {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state.writeUp));
           dispatch({ type: 'SET_IS_DIRTY', payload: false });
-        }, 1000); 
-        return () => clearTimeout(timeoutId);
-      } catch (error) {
-        console.error("Error saving draft to localStorage:", error);
-      }
+        } catch (error) {
+          const isQuota = error instanceof DOMException && error.name === 'QuotaExceededError';
+          dispatch({ type: 'SAVE_ERROR', payload: isQuota ? 'QuotaExceededError' : String(error) });
+        }
+      }, 1000);
+      return () => clearTimeout(timeoutId);
     }
   }, [state.writeUp, state.isDirty]);
 

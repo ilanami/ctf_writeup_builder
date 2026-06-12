@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useScopedI18n } from '@/locales/client';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 const PROVIDERS = [
   { value: 'gemini', label: 'Google Gemini' },
@@ -24,13 +25,17 @@ export default function ApiKeyConfigModal({ onSave, onCancel }: { onSave?: (data
 
   // Cargar valores guardados
   useEffect(() => {
-    const savedProvider = localStorage.getItem('aiProvider');
-    const savedEncodedKey = localStorage.getItem('aiApiKey');
-    
-    if (savedProvider) setProvider(savedProvider);
-    if (savedEncodedKey) {
-      const decodedKey = decodeApiKey(savedEncodedKey);
-      setApiKey(decodedKey);
+    try {
+      const savedProvider = localStorage.getItem(STORAGE_KEYS.aiProvider);
+      const savedEncodedKey = localStorage.getItem(STORAGE_KEYS.aiApiKey);
+
+      if (savedProvider) setProvider(savedProvider);
+      if (savedEncodedKey) {
+        const decodedKey = decodeApiKey(savedEncodedKey);
+        setApiKey(decodedKey);
+      }
+    } catch (error) {
+      console.error("Error loading API key config:", error);
     }
   }, []);
 
@@ -71,19 +76,29 @@ export default function ApiKeyConfigModal({ onSave, onCancel }: { onSave?: (data
     }
     // Codificar en Base64 y guardar (NO es encriptación)
     const encodedKey = encodeApiKey(apiKey);
-    localStorage.setItem('aiProvider', provider);
-    localStorage.setItem('aiApiKey', encodedKey);
+    try {
+      localStorage.setItem(STORAGE_KEYS.aiProvider, provider);
+      localStorage.setItem(STORAGE_KEYS.aiApiKey, encodedKey);
+    } catch (error) {
+      const isQuota = error instanceof DOMException && error.name === 'QuotaExceededError';
+      setError(isQuota ? tai('errorApiKeyStorageFull') : tai('errorApiKeySave'));
+      return;
+    }
     if (onSave) onSave({ provider, apiKey });
   };
 
   const handleDeleteApiKey = () => {
-    const savedEncodedKey = localStorage.getItem('aiApiKey');
-    if (!savedEncodedKey) {
-      alert(tai('apiKeyEmptyTitle'));
-      return;
+    try {
+      const savedEncodedKey = localStorage.getItem(STORAGE_KEYS.aiApiKey);
+      if (!savedEncodedKey) {
+        alert(tai('apiKeyEmptyTitle'));
+        return;
+      }
+      localStorage.removeItem(STORAGE_KEYS.aiApiKey);
+      localStorage.removeItem(STORAGE_KEYS.aiProvider);
+    } catch (error) {
+      console.error("Error removing API key:", error);
     }
-    localStorage.removeItem('aiApiKey');
-    localStorage.removeItem('aiProvider');
     setApiKey('');
     setProvider('gemini');
     setError('');

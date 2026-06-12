@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { SectionType, WriteUpSection, WriteUp, Screenshot } from '@/lib/types';
-import { SECTION_TYPES_KEYS, getSectionItemIcon, LOCAL_STORAGE_KEY, createDefaultSection, DEFAULT_SECTIONS_TEMPLATE_KEYS } from '@/lib/constants';
+import { SECTION_TYPES_KEYS, getSectionItemIcon, LOCAL_STORAGE_KEY, STORAGE_KEYS, createDefaultSection, DEFAULT_SECTIONS_TEMPLATE_KEYS } from '@/lib/constants';
 import { SectionItemCard } from './SectionItemCard';
 import { ScrollArea } from './ui/scroll-area';
 import { format, parseISO } from 'date-fns';
@@ -33,8 +33,9 @@ import { extractTextAndImagesWithPdfJSEnhanced } from '../utils/pdfExtractorEnha
 import ApiKeyConfigModal from './ApiKeyConfigModal';
 import AboutModal from './AboutModal';
 import HelpModal from './HelpModal';
-// @ts-ignore – react-beautiful-dnd lacks types; migración a @dnd-kit pendiente (BUG-08)
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { SortableSectionItem } from './SortableSectionItem';
 
 
 
@@ -83,15 +84,19 @@ const AppHeader: React.FC = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
-    const savedProvider = localStorage.getItem('aiProvider') || 'gemini';
-    const savedEncryptedKey = localStorage.getItem('aiApiKey') || '';
-    let apiKey = '';
     try {
-      apiKey = savedEncryptedKey ? atob(savedEncryptedKey) : '';
-    } catch {
-      apiKey = savedEncryptedKey;
+      const savedProvider = localStorage.getItem(STORAGE_KEYS.aiProvider) || 'gemini';
+      const savedEncryptedKey = localStorage.getItem(STORAGE_KEYS.aiApiKey) || '';
+      let apiKey = '';
+      try {
+        apiKey = savedEncryptedKey ? atob(savedEncryptedKey) : '';
+      } catch {
+        apiKey = savedEncryptedKey;
+      }
+      setApiKeyConfig({ provider: savedProvider, apiKey });
+    } catch (error) {
+      console.error("Error loading API key config:", error);
     }
-    setApiKeyConfig({ provider: savedProvider, apiKey });
   }, [isApiKeyModalOpen]);
 
   const handleSaveApiKey = ({ provider, apiKey }: { provider: string; apiKey: string }) => {
@@ -100,8 +105,12 @@ const AppHeader: React.FC = () => {
   };
 
   const handleDeleteApiKey = () => {
-    localStorage.removeItem('aiApiKey');
-    localStorage.removeItem('aiProvider');
+    try {
+      localStorage.removeItem(STORAGE_KEYS.aiApiKey);
+      localStorage.removeItem(STORAGE_KEYS.aiProvider);
+    } catch (error) {
+      console.error("Error removing API key:", error);
+    }
     setApiKeyConfig({ provider: 'gemini', apiKey: '' });
     setIsApiKeyModalOpen(false);
     toast({ title: tai('apiKeyDeletedTitle'), description: tai('apiKeyDeletedDescription') });
@@ -796,11 +805,15 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   const templateSections = writeUp.sections.filter(s => s.isTemplate);
 
   // Drag & Drop handler
-  const handleDragEnd = (result: any) => {
-    if (!result.destination) return;
-    const reordered = Array.from(userSections);
-    const [removed] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, removed);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = userSections.findIndex(s => s.id === active.id);
+    const newIndex = userSections.findIndex(s => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(userSections, oldIndex, newIndex);
     // Mantén las plantillas sugeridas al final
     dispatch({ type: 'REORDER_SECTIONS', payload: [...reordered, ...templateSections] });
   };
@@ -819,49 +832,30 @@ const StructureAndAddSectionsPanel: React.FC = () => {
             <ScrollArea className="h-[calc(40vh-90px)] min-h-[200px] pr-1">
               <div className="flex flex-col gap-1 pb-1">
                 {/* DRAG & DROP: Secciones de usuario */}
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="userSections-droppable" direction="vertical">
-                    {(provided: any) => (
-                      <div {...provided.droppableProps} ref={provided.innerRef} style={{ width: '100%' }}>
-                        {userSections.map((section, index) => {
-                          const Icon = getSectionItemIcon(section.type, section.title);
-                          const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
-                          const displayTitle = isI18nKey ? t(section.title as any, {}) : section.title;
-                          const description = section.type ? tst(`${section.type}.description` as any) : '';
-                          return (
-                            <Draggable key={section.id} draggableId={section.id} index={index}>
-                              {(provided: any, snapshot: any) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  style={{
-                                    ...provided.draggableProps.style,
-                                    background: snapshot.isDragging ? '#003300' : undefined,
-                                    width: '100%',
-                                    minWidth: 0,
-                                    margin: 0,
-                                    boxSizing: 'border-box',
-                                  }}
-                                >
-                                  <SectionItemCard
-                                    section={section}
-                                    icon={<Icon className="mr-2 h-5 w-5 mt-0.5 flex-shrink-0 text-foreground" />}
-                                    isActive={section.id === activeSectionId}
-                                    onSelect={() => handleSelectSection(section.id)}
-                                    onDelete={() => handleDeleteSection(section.id)}
-                                    className=""
-                                  />
-                                </div>
-                              )}
-                            </Draggable>
-                          );
-                        })}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
+                <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext
+                    items={userSections.map(s => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {userSections.map((section) => {
+                      const Icon = getSectionItemIcon(section.type, section.title);
+                      const isI18nKey = section.title?.startsWith('defaultSections.') || section.title?.startsWith('sectionTypes.');
+                      const displayTitle = isI18nKey ? t(section.title as any, {}) : section.title;
+                      const description = section.type ? tst(`${section.type}.description` as any) : '';
+                      return (
+                        <SortableSectionItem
+                          key={section.id}
+                          section={section}
+                          icon={<Icon className="mr-2 h-5 w-5 mt-0.5 flex-shrink-0 text-foreground" />}
+                          isActive={section.id === activeSectionId}
+                          onSelect={() => handleSelectSection(section.id)}
+                          onDelete={() => handleDeleteSection(section.id)}
+                          className=""
+                        />
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
                 {/* FIN DRAG & DROP */}
 
               </div>
@@ -942,8 +936,24 @@ const StructureAndAddSectionsPanel: React.FC = () => {
 }
 
 export const AppLayout: React.FC = () => {
-  const { state } = useWriteUp();
+  const { state, dispatch } = useWriteUp();
   const { currentView } = state;
+  const { toast } = useToast();
+  const tt = useScopedI18n('toasts');
+
+  // Show toast when saveError changes
+  React.useEffect(() => {
+    if (state.saveError) {
+      toast({
+        title: tt('errorSavingProgress'),
+        description: state.saveError === 'QuotaExceededError'
+          ? tt('storageFullError')
+          : tt('couldNotSaveProgress'),
+        variant: 'destructive',
+      });
+      dispatch({ type: 'SAVE_ERROR', payload: null });
+    }
+  }, [state.saveError]);
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background border-t-4 border-b-4 border-l-4 border-[#00ff00]">

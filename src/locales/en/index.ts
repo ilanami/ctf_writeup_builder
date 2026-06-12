@@ -154,6 +154,7 @@ export default {
     progressSavedDetails: "Your write-up has been saved in the browser.",
     errorSavingProgress: "Error Saving",
     couldNotSaveProgress: "Could not save progress.",
+    storageFullError: "Browser storage is full. Cannot save draft. Try removing old data or clearing browser storage.",
     gistNotImplemented: "Gist export is not yet implemented.",
     pdfExportStarted: "PDF export started. The print dialog will open. Complete the process to save or print your PDF.",
   },
@@ -308,6 +309,8 @@ export default {
     apiKeyMissingTitle: "API Key Required",
     apiKeyMissingDescription: "Please configure your AI API Key to use this feature.",
     apiKeyMissingDescriptionForPdf: "Please configure your AI API Key to attempt AI-assisted PDF processing.",
+    errorApiKeyStorageFull: "Browser storage is full. Cannot save API Key.",
+    errorApiKeySave: "Could not save API Key.",
     currentKey: "Current key",
   },
   about: {
