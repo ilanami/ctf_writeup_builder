@@ -192,7 +192,7 @@ export const WriteUpPreview: React.FC = () => {
                         )}
                         <div
                           className="prose prose-sm max-w-none
-                                      prose-headings:mt-3 prose-headings:mb-1.5
+                                      prose-headings:text-foreground prose-headings:mt-3 prose-headings:mb-1.5
                                       prose-h1:mt-4 prose-h1:mb-2 prose-h1:text-xl
                                       prose-h2:mt-3 prose-h2:mb-1.5 prose-h2:text-lg
                                       prose-h3:mt-2 prose-h3:mb-1 prose-h3:text-base
@@ -202,11 +202,13 @@ export const WriteUpPreview: React.FC = () => {
                                       prose-ul:my-1.5 prose-ol:my-1.5
                                       prose-li:my-0.5
                                       prose-strong:text-foreground
-                                      prose-a:text-foreground prose-a:font-bold hover:prose-a:text-accent-foreground
+                                      prose-a:text-primary prose-a:font-bold hover:prose-a:text-foreground
                                       prose-code:text-foreground prose-code:font-semibold
                                       prose-pre:bg-muted prose-pre:text-foreground
                                       prose-blockquote:border-foreground prose-blockquote:text-muted-foreground
-                                      prose-blockquote:my-2"
+                                      prose-blockquote:my-2
+                                      prose-th:text-foreground prose-td:text-foreground
+                                      prose-table:text-foreground"
                           dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                         />
                         {section.screenshots && section.screenshots.length > 0 && (
