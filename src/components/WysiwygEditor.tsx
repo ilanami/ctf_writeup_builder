@@ -8,7 +8,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import { marked } from 'marked';
 import { Button } from '@/components/ui/button';
-import { Bold, Italic, Link2, Underline as UnderlineIcon, Code2, Code, List } from 'lucide-react';
+import { Bold, Italic, Link2, Underline as UnderlineIcon, Code2, Code, List, Heading1, Heading2, Heading3, Heading4 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WysiwygEditorProps {
@@ -38,7 +38,7 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
       Link.configure({ openOnClick: false }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -85,6 +85,11 @@ export const WysiwygEditor: React.FC<WysiwygEditorProps> = ({
     <div className={cn('w-full', className)}>
       {label && <label htmlFor={id} className="block mb-1 font-bold">{label}</label>}
       <div className="flex items-center space-x-1 p-1 border-b border-t border-border bg-muted mb-0 rounded-t-md">
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editor.isActive('heading', { level: 1 }) ? 'bg-accent' : ''} title="Título 1 (H1)"><Heading1 size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editor.isActive('heading', { level: 2 }) ? 'bg-accent' : ''} title="Título 2 (H2)"><Heading2 size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={editor.isActive('heading', { level: 3 }) ? 'bg-accent' : ''} title="Título 3 (H3)"><Heading3 size={16} /></Button>
+        <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()} className={editor.isActive('heading', { level: 4 }) ? 'bg-accent' : ''} title="Título 4 (H4)"><Heading4 size={16} /></Button>
+        <span className="w-px h-4 bg-border mx-0.5" />
         <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'bg-accent' : ''} title="Negrita (Ctrl+B)"><Bold size={16} /></Button>
         <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'bg-accent' : ''} title="Cursiva (Ctrl+I)"><Italic size={16} /></Button>
         <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'bg-accent' : ''} title="Subrayado (Ctrl+U)"><UnderlineIcon size={16} /></Button>
