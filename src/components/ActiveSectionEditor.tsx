@@ -92,21 +92,7 @@ export const ActiveSectionEditor: React.FC = () => {
     return (
       <Card className="h-full flex items-center justify-center border-dashed border-border bg-transparent">
         <CardContent className="w-full flex flex-col items-center justify-center">
-          <span
-            style={{
-              fontSize: '1.2rem',
-              fontWeight: 'bold',
-              color: '#00ff00',
-              textAlign: 'center',
-              background: 'none',
-              letterSpacing: '0.5px',
-              textShadow: '0 0 8px #00ff00',
-              padding: '0.3em 0',
-              fontFamily: 'monospace, Fira Code, Consolas, Courier New',
-              display: 'block',
-              lineHeight: '1.4',
-            }}
-          >
+          <span className="text-glow text-center tracking-wide py-1 font-bold font-mono text-lg block leading-snug">
             {ta('selectSectionToEdit')}<br />{ta('orCreateNew')}
           </span>
         </CardContent>
@@ -322,17 +308,17 @@ export const ActiveSectionEditor: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleAddToStructure}
-                className="w-full border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00ff00] hover:text-black shadow-[0_0_12px_#00ff00,0_0_4px_#00ff00] font-bold uppercase tracking-wider transition-all duration-200"
+                className="w-full btn-glow hover:bg-primary hover:text-primary-foreground uppercase tracking-wider transition-all duration-200"
                 aria-label={ta('addSection')}
               >
-                <PlusCircle size={18} className="mr-2" style={{ filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+                <PlusCircle size={18} className="mr-2 icon-glow" />
                 {ta('addSection')}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => dispatch({ type: 'DISCARD_SUGGESTED_SECTION' })}
-                className="w-full border-2 border-red-500/60 text-red-400 bg-black hover:bg-red-500 hover:text-white shadow-[0_0_8px_rgba(239,68,68,0.4),0_0_2px_rgba(239,68,68,0.3)] font-bold uppercase tracking-wider transition-all duration-200"
+                className="w-full border-2 border-destructive/60 text-destructive bg-background hover:bg-destructive hover:text-destructive-foreground font-bold uppercase tracking-wider transition-all duration-200"
                 aria-label={ta('discardSection')}
               >
                 <XCircle size={18} className="mr-2" />
@@ -433,13 +419,12 @@ export const ActiveSectionEditor: React.FC = () => {
               disabled={isGeneratingWithAi || !(sectionToEdit.isTemplate && sectionToEdit.title?.startsWith('defaultSections.')
                 ? t(sectionToEdit.title as any, {})
                 : sectionToEdit.title)?.trim()}
-              className="whitespace-nowrap border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00eaff] hover:text-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-8 px-2 text-[0.95rem] flex items-center justify-center"
-              style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}
+              className="whitespace-nowrap btn-glow hover:bg-primary hover:text-primary-foreground h-8 px-2 text-[0.95rem] flex items-center justify-center uppercase tracking-wider"
             >
               {isGeneratingWithAi ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" style={{ color: '#00ff00' }} /> {ta('generating')}</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin icon-glow" /> {ta('generating')}</>
               ) : (
-                <><Wand2 className="mr-2 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {ta('generateWithAI')}</>
+                <><Wand2 className="mr-2 h-4 w-4 icon-glow" /> {ta('generateWithAI')}</>
               )}
             </Button>
           </div>
@@ -454,19 +439,17 @@ export const ActiveSectionEditor: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleCopyAiSuggestion}
-                  className="border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00eaff] hover:text-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-8 px-2 text-[0.95rem] flex items-center"
-                  style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}
+                  className="btn-glow hover:bg-primary hover:text-primary-foreground h-8 px-2 text-[0.95rem] flex items-center uppercase tracking-wider"
                 >
-                  <ClipboardCopy className="mr-2 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {ta('copySuggestion')}
+                  <ClipboardCopy className="mr-2 h-4 w-4 icon-glow" /> {ta('copySuggestion')}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleClearAiSuggestion}
-                  className="border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00eaff] hover:text-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-8 px-2 text-[0.95rem] flex items-center"
-                  style={{ boxShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}
+                  className="btn-glow hover:bg-primary hover:text-primary-foreground h-8 px-2 text-[0.95rem] flex items-center uppercase tracking-wider"
                 >
-                  <XCircle className="mr-2 h-4 w-4" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {ta('deleteSuggestion')}
+                  <XCircle className="mr-2 h-4 w-4 icon-glow" /> {ta('deleteSuggestion')}
                 </Button>
               </div>
             </div>

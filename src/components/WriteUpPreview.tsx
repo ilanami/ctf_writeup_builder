@@ -110,19 +110,7 @@ export const WriteUpPreview: React.FC = () => {
               width: '100%',
             }}
           >
-            <span
-              style={{
-                fontSize: '2rem',
-                fontWeight: 'bold',
-                color: '#00ff00',
-                textAlign: 'center',
-                background: 'none',
-                letterSpacing: '0.5px',
-                textShadow: '0 0 8px #00ff00',
-                padding: '0.5em 0',
-                fontFamily: 'monospace, Fira Code, Consolas, Courier New',
-              }}
-            >
+            <span className="text-glow text-center tracking-wide py-2 font-bold font-mono text-2xl">
               Select a section to edit or create a new one from the sections panel.
             </span>
           </div>

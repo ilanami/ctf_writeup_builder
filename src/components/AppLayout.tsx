@@ -6,7 +6,8 @@ import { ActiveSectionEditor } from './ActiveSectionEditor';
 import { WriteUpPreview } from './WriteUpPreview';
 import { useWriteUp } from '@/hooks/useWriteUp';
 import { Button } from './ui/button';
-import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info } from 'lucide-react';
+import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info, Terminal, Moon, Sun } from 'lucide-react';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import { PdfExportModal } from './PdfExportModal';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -60,6 +61,7 @@ const AppHeader: React.FC = () => {
   const { state, dispatch } = useWriteUp();
   const { toast } = useToast();
   const { currentView, writeUp } = state;
+  const { theme, setTheme } = useAppTheme();
   const t = useI18n();
   const th = useScopedI18n('header');
   const tt = useScopedI18n('toasts');
@@ -635,7 +637,7 @@ const AppHeader: React.FC = () => {
   };
 
   return (
-    <header className="flex flex-row items-start p-1 sm:p-2 border-b-4 border-l-4 border-r-4 border-[#00ff00] bg-background sticky top-0 z-10">
+    <header className="flex flex-row items-start p-1 sm:p-2 border-b-4 border-l-4 border-r-4 border-border border-glow bg-background sticky top-0 z-10">
       <div className="flex items-center mb-1 sm:mb-0">
         <TerminalSquare className="h-8 w-8 sm:h-8 sm:w-8 text-foreground mr-1 sm:mr-2" />
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground whitespace-nowrap">
@@ -647,8 +649,8 @@ const AppHeader: React.FC = () => {
           {/* Fila superior: Nuevo, Guardar, Vista Previa/Editor, Exportar MD, Exportar PDF, API Key, Acerca de */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-2 text-[0.75rem] sm:text-[0.85rem]">
-                <PlusCircle className="mr-1 h-3.5 w-3.5" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('new')}
+              <Button size="sm" className="btn-glow h-6 sm:h-7 px-2 text-[0.75rem] sm:text-[0.85rem] uppercase tracking-wider">
+                <PlusCircle className="mr-1 h-3.5 w-3.5 icon-glow" /> {th('new')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -664,43 +666,43 @@ const AppHeader: React.FC = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button onClick={handleSaveProgress} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"><Save className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('save')}</Button>
-          <Button onClick={toggleView} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-            {currentView === 'editor' ? <Eye className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> : <Edit3 className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />}
+          <Button onClick={handleSaveProgress} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"><Save className="mr-1 h-3 w-3 icon-glow" /> {th('save')}</Button>
+          <Button onClick={toggleView} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+            {currentView === 'editor' ? <Eye className="mr-1 h-3 w-3 icon-glow" /> : <Edit3 className="mr-1 h-3 w-3 icon-glow" />}
             {currentView === 'editor' ? th('preview') : th('editor')}
           </Button>
-          <Button onClick={handleExportMd} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"><FileText className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('exportMD')}</Button>
+          <Button onClick={handleExportMd} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"><FileText className="mr-1 h-3 w-3 icon-glow" /> {th('exportMD')}</Button>
           <PdfExportModal />
-          <Button onClick={() => setIsApiKeyModalOpen(true)} variant="outline" size="sm" title={tai('configureApiKeyButton')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-            <KeyRound className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('configureApiKey')}
+          <Button onClick={() => setIsApiKeyModalOpen(true)} variant="outline" size="sm" title={tai('configureApiKeyButton')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+            <KeyRound className="mr-1 h-3 w-3 icon-glow" /> {th('configureApiKey')}
           </Button>
-          <Button onClick={() => setIsAboutOpen(true)} variant="outline" size="sm" title={t('about.title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-            <Info className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {t('about.title')}
+          <Button onClick={() => setIsAboutOpen(true)} variant="outline" size="sm" title={t('about.title')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+            <Info className="mr-1 h-3 w-3 icon-glow" /> {t('about.title')}
           </Button>
         </div>
         <div className="flex flex-wrap gap-x-2 gap-y-1 mt-0">
-          {/* Fila inferior: English, Importar JSON, Importar MD, Backup JSON, Donar, Ayuda y Preguntas Frecuentes */}
-          <Button onClick={handleLocaleChange} variant="outline" size="sm" title={th('toggleLanguage')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-            <Languages className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+          {/* Fila inferior: Idioma, Importar, Backup, Donar, Ayuda, Temas */}
+          <Button onClick={handleLocaleChange} variant="outline" size="sm" title={th('toggleLanguage')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+            <Languages className="mr-1 h-3 w-3 icon-glow" />
             {currentLocale === 'es' ? th('switchToEnglish') : th('switchToSpanish')}
           </Button>
           <label htmlFor="import-json-input-header" className="mb-0">
-            <Button variant="outline" size="sm" asChild className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-              <span><Upload className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('importJSON')}</span>
+            <Button variant="outline" size="sm" asChild className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+              <span><Upload className="mr-1 h-3 w-3 icon-glow" /> {th('importJSON')}</span>
             </Button>
           </label>
           <input id="import-json-input-header" type="file" accept=".json" onChange={handleImportJson} className="hidden" />
           <label htmlFor="import-md-input-header" className="mb-0">
-            <Button variant="outline" size="sm" asChild className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-              <span><FileArchive className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('importMD')}</span>
+            <Button variant="outline" size="sm" asChild className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+              <span><FileArchive className="mr-1 h-3 w-3 icon-glow" /> {th('importMD')}</span>
             </Button>
           </label>
           <input id="import-md-input-header" type="file" accept=".md,.txt,text/markdown" onChange={handleImportMdFile} className="hidden" />
-          <Button onClick={handleExportJsonBackup} variant="outline" size="sm" className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"><Download className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('backup')}</Button>
+          <Button onClick={handleExportJsonBackup} variant="outline" size="sm" className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"><Download className="mr-1 h-3 w-3 icon-glow" /> {th('backup')}</Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" title={tDonations('title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-                <Gift className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {th('donateButton')}
+              <Button variant="outline" size="sm" title={tDonations('title')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+                <Gift className="mr-1 h-3 w-3 icon-glow" /> {th('donateButton')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -714,9 +716,9 @@ const AppHeader: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-2 w-full">
                   <AlertDialogCancel className="font-bold w-full sm:w-auto">{tDonations('closeButton')}</AlertDialogCancel>
                   <AlertDialogAction asChild>
-                    <a 
-                      href="https://www.paypal.me/1511amff" 
-                      target="_blank" 
+                    <a
+                      href="https://www.paypal.me/1511amff"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-foreground text-primary-foreground hover:bg-foreground/90 h-10 px-4 py-2 font-bold w-full sm:w-auto"
                     >
@@ -737,9 +739,45 @@ const AppHeader: React.FC = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button onClick={() => setIsHelpOpen(true)} variant="outline" size="sm" title={t('help.title')} className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]">
-            <HelpCircle className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} /> {t('help.title')}
+          <Button onClick={() => setIsHelpOpen(true)} variant="outline" size="sm" title={t('help.title')} className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider">
+            <HelpCircle className="mr-1 h-3 w-3 icon-glow" /> {t('help.title')}
           </Button>
+          {/* Theme switcher */}
+          <div className="flex items-center gap-1 ml-2 border-l border-border pl-2">
+            <Button
+              variant={theme === 'hacker' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTheme('hacker')}
+              className="btn-glow h-6 sm:h-7 w-8 p-0"
+              aria-label={th('themeHacker')}
+              title={th('themeHacker')}
+            >
+              <Terminal className="h-3.5 w-3.5 icon-glow" />
+            </Button>
+            <Button
+              variant={theme === 'dark' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTheme('dark')}
+              className="btn-glow h-6 sm:h-7 w-8 p-0"
+              aria-label={th('themeDark')}
+              title={th('themeDark')}
+            >
+              <Moon className="h-3.5 w-3.5 icon-glow" />
+            </Button>
+            <Button
+              variant={theme === 'light' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTheme('light')}
+              className="btn-glow h-6 sm:h-7 w-8 p-0"
+              aria-label={th('themeLight')}
+              title={th('themeLight')}
+            >
+              <Sun className="h-3.5 w-3.5 icon-glow" />
+            </Button>
+          </div>
+          <span className="sr-only" aria-live="polite">
+            {theme === 'hacker' ? th('themeHacker') : theme === 'dark' ? th('themeDark') : th('themeLight')}
+          </span>
         </div>
       </div>
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
@@ -819,7 +857,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
   };
 
   return (
-    <div className="p-2 space-y-1 h-full flex flex-col bg-card rounded-lg shadow-md border-r-4 border-[#00ff00]">
+    <div className="p-2 space-y-1 h-full flex flex-col bg-card rounded-lg shadow-md border-r-4 border-border border-glow">
       <Accordion type="multiple" defaultValue={['structure-panel', 'suggested-sections-panel', 'add-section-panel']} className="w-full">
         {/* Estructura Real */}
         <AccordionItem value="structure-panel">
@@ -956,11 +994,11 @@ export const AppLayout: React.FC = () => {
   }, [state.saveError]);
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background border-t-4 border-b-4 border-l-4 border-[#00ff00]">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background border-t-4 border-b-4 border-l-4 border-border border-glow">
       <AppHeader />
       <div className="flex flex-1 overflow-hidden">
         {currentView === 'editor' && (
-          <aside className="w-[320px] min-w-[300px] max-w-[340px] h-full overflow-y-auto bg-card border-r-4 border-[#00ff00] shadow-md">
+          <aside className="w-[320px] min-w-[300px] max-w-[340px] h-full overflow-y-auto bg-card border-r-4 border-border border-glow shadow-md">
             <GeneralInfoPanel />
           </aside>
         )}
@@ -970,7 +1008,7 @@ export const AppLayout: React.FC = () => {
         </main>
 
         {currentView === 'editor' && (
-          <aside className="w-[400px] min-w-[380px] max-w-[450px] h-full overflow-y-auto border-l-4 border-[#00ff00]">
+          <aside className="w-[400px] min-w-[380px] max-w-[450px] h-full overflow-y-auto border-l-4 border-border border-glow">
             <StructureAndAddSectionsPanel />
           </aside>
         )}

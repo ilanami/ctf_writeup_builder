@@ -89,6 +89,7 @@ export const STORAGE_KEYS = {
   writeUp: 'ctfWriteUpBuilder_draft',
   aiApiKey: 'aiApiKey',
   aiProvider: 'aiProvider',
+  theme: 'ctf-app-theme',
 } as const;
 
 export const LOCAL_STORAGE_KEY = STORAGE_KEYS.writeUp;

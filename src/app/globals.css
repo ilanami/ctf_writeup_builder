@@ -52,15 +52,151 @@
     --sidebar-border: 120 50% 15%; /* Dark green border for sidebar */
     --sidebar-ring: 180 100% 50%; /* Cyan for focus rings within sidebar */
   }
-}
 
-@layer base {
+  [data-theme="dark"] {
+    --background: 220 15% 10%;
+    --foreground: 210 20% 88%;
+    --muted: 220 15% 16%;
+    --muted-foreground: 210 15% 55%;
+    --popover: 220 15% 13%;
+    --popover-foreground: 210 20% 88%;
+    --card: 220 15% 13%;
+    --card-foreground: 210 20% 88%;
+    --border: 220 15% 22%;
+    --input: 220 15% 14%;
+    --primary: 210 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 20% 75%;
+    --accent: 210 100% 70%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --ring: 210 100% 60%;
+    --radius: 0.5rem;
+    --chart-1: 210 100% 60%;
+    --chart-2: 190 100% 50%;
+    --chart-3: 280 80% 60%;
+    --chart-4: 40 100% 50%;
+    --chart-5: 340 80% 55%;
+    --sidebar-background: 220 15% 13%;
+    --sidebar-foreground: 210 20% 88%;
+    --sidebar-primary: 210 100% 60%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 210 20% 75%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 210 100% 60%;
+  }
+
+  [data-theme="light"] {
+    --background: 0 0% 98%;
+    --foreground: 220 15% 18%;
+    --muted: 210 15% 93%;
+    --muted-foreground: 220 10% 45%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 18%;
+    --border: 210 15% 82%;
+    --input: 210 15% 94%;
+    --primary: 210 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 15% 90%;
+    --secondary-foreground: 220 15% 25%;
+    --accent: 210 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --ring: 210 100% 45%;
+    --radius: 0.5rem;
+    --chart-1: 210 100% 40%;
+    --chart-2: 150 60% 40%;
+    --chart-3: 280 60% 50%;
+    --chart-4: 40 100% 45%;
+    --chart-5: 340 70% 50%;
+    --sidebar-background: 210 15% 96%;
+    --sidebar-foreground: 220 15% 18%;
+    --sidebar-primary: 210 100% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 90%;
+    --sidebar-accent-foreground: 220 15% 25%;
+    --sidebar-border: 210 15% 82%;
+    --sidebar-ring: 210 100% 45%;
+  }
+
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground font-mono; /* Apply monospace font globally */
   }
+}
+
+/* Theme-aware button glow — neon in hacker, clean in dark/light */
+.btn-glow {
+  border: 2px solid hsl(var(--foreground));
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+[data-theme="hacker"] .btn-glow {
+  border-color: #00ff00;
+  color: #00ff00;
+  background: #000000;
+  box-shadow: 0 0 8px #00ff00, 0 0 2px #00ff00;
+}
+
+[data-theme="dark"] .btn-glow {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+  background: hsl(var(--background));
+  box-shadow: none;
+}
+
+[data-theme="light"] .btn-glow {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+  background: hsl(var(--card));
+  box-shadow: none;
+}
+
+/* Theme-aware icon glow */
+.icon-glow {
+  color: hsl(var(--foreground));
+}
+
+[data-theme="hacker"] .icon-glow {
+  color: #00ff00;
+  filter: drop-shadow(0 0 4px #00ff00);
+}
+
+[data-theme="dark"] .icon-glow,
+[data-theme="light"] .icon-glow {
+  filter: none;
+}
+
+/* Theme-aware text glow */
+.text-glow {
+  color: hsl(var(--foreground));
+  text-shadow: none;
+}
+
+[data-theme="hacker"] .text-glow {
+  color: #00ff00;
+  text-shadow: 0 0 8px #00ff00;
+}
+
+/* Theme-aware border glow */
+.border-glow {
+  border-color: hsl(var(--border));
+}
+
+[data-theme="hacker"] .border-glow {
+  border-color: #00ff00;
 }
 
 @keyframes blink-animation {
@@ -75,6 +211,6 @@
 }
 
 .text-center-green {
-  color: #00ff00 !important;
+  color: hsl(var(--foreground)) !important;
   text-align: center;
 }

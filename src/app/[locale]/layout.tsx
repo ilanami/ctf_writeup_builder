@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { I18nProviderClient } from '@/locales/client';
 import type { ReactNode } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import { ClientLayout } from '@/components/ClientLayout';
 
 export const metadata: Metadata = {
   title: 'CTF Write-up Builder >_',
@@ -22,17 +23,18 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
-  console.log(`RootLayout rendering with locale: ${locale}`);
   return (
     <I18nProviderClient locale={locale} key={locale}>
       <html lang={locale}>
         <head>
-          {/* Eliminado script inline para máxima seguridad CSP */}
+          <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('ctf-app-theme');if(t&&['hacker','dark','light'].indexOf(t)!==-1){document.documentElement.setAttribute('data-theme',t)}}catch(e){}` }} />
         </head>
         <body className={`${GeistSans.variable} ${GeistMono.variable} font-mono antialiased`}>
-          {children}
-          <Toaster />
-          <Analytics />
+          <ClientLayout>
+            {children}
+            <Toaster />
+            <Analytics />
+          </ClientLayout>
         </body>
       </html>
     </I18nProviderClient>

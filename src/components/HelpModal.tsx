@@ -86,14 +86,14 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] bg-black border-2 border-green-500 text-green-500 font-mono" aria-describedby="help-modal-desc">
+      <DialogContent className="max-w-4xl max-h-[85vh] bg-background border-2 border-foreground text-foreground font-mono" aria-describedby="help-modal-desc">
         <div id="help-modal-desc" className="sr-only">{t('intro')}</div>
-        <DialogHeader className="border-b border-green-500 pb-4">
+        <DialogHeader className="border-b border-foreground pb-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center bg-green-500 text-black font-bold rounded">
               ❓
             </div>
-            <DialogTitle className="text-2xl font-bold text-green-500 tracking-wider">
+            <DialogTitle className="text-2xl font-bold text-foreground tracking-wider">
               {t('title')}
             </DialogTitle>
           </div>
@@ -130,7 +130,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                       className={`w-full flex items-center justify-between p-3 rounded border transition-colors ${
                         activeCategory === category.id
                           ? 'bg-green-500/20 border-green-400 text-green-300'
-                          : 'bg-green-500/5 border-green-500/30 hover:bg-green-500/10'
+                          : 'bg-muted/50 border-foreground/30 hover:bg-muted'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
               </div>
 
               {/* Quick Actions */}
-              <div className="mt-6 p-3 bg-green-500/10 border border-green-500/30 rounded">
+              <div className="mt-6 p-3 bg-muted border border-foreground/30 rounded">
                 <div className="text-sm font-bold text-green-400 mb-2">{t('quickActions.label')}</div>
                 <div className="space-y-2 text-xs">
                   <button 
@@ -177,7 +177,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
             <ScrollArea className="h-full pr-4">
               <div className="space-y-2">
                 {/* Intro */}
-                <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded">
+                <div className="mb-6 p-4 bg-muted border border-foreground/30 rounded">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-lg">💡</span>
                     <span className="text-sm font-bold text-green-400">{t('infoTitle')}</span>
@@ -195,11 +195,11 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   filteredFAQ.map((item, i) => (
                     <div 
                       key={i} 
-                      className="border border-green-500/30 rounded-lg overflow-hidden bg-green-500/5 hover:bg-green-500/10 transition-colors"
+                      className="border border-foreground/30 rounded-lg overflow-hidden bg-muted/50 hover:bg-muted transition-colors"
                     >
                       <button
                         onClick={() => toggleExpanded(i)}
-                        className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-green-500/5"
+                        className="w-full p-4 text-left flex items-start justify-between gap-3 hover:bg-muted/50"
                       >
                         <div className="flex items-start gap-3 flex-1">
                           <div className="flex-shrink-0 mt-1">
@@ -210,7 +210,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                               Q: {item.q}
                             </div>
                             {expandedItems.has(i) && (
-                              <div className="text-sm text-green-200 leading-relaxed mt-2 pl-4 border-l-2 border-green-500/30">
+                              <div className="text-sm text-muted-foreground leading-relaxed mt-2 pl-4 border-l-2 border-foreground/30">
                                 <strong className="text-green-400">A:</strong> {item.a}
                               </div>
                             )}
@@ -227,7 +227,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                 )}
 
                 {/* Contact Section */}
-                <div className="mt-6 p-4 bg-gradient-to-r from-green-500/20 to-green-500/10 border border-green-500/40 rounded-lg text-center">
+                <div className="mt-6 p-4 bg-gradient-to-r from-foreground/20 to-foreground/10 border border-foreground/40 rounded-lg text-center">
                   <div className="text-lg font-bold text-green-400 mb-2">{t('contactTitle')}</div>
                   <div className="text-sm text-green-300 mb-3">
                     {t('contactDesc')}
@@ -236,14 +236,14 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     <Button
                       onClick={() => window.open('mailto:writeup_builder@proton.me', '_blank')}
                       variant="outline"
-                      className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono text-xs"
+                      className="border-foreground text-foreground hover:bg-muted font-mono text-xs"
                     >
                       📧 Email Support
                     </Button>
                     <Button
                       onClick={() => window.open('https://github.com/ilanami/ctf_writeup_builder/issues', '_blank')}
                       variant="outline"
-                      className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono text-xs"
+                      className="border-foreground text-foreground hover:bg-muted font-mono text-xs"
                     >
                       🐛 Report Issue
                     </Button>
@@ -254,7 +254,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
           </div>
         </div>
         
-        <DialogFooter className="border-t border-green-500 pt-4">
+        <DialogFooter className="border-t border-foreground pt-4">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 text-xs text-green-400">
               <span>💚 {t('communityHelp')}</span>
@@ -263,7 +263,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <Button
                 onClick={() => setExpandedItems(new Set(filteredFAQ.map((_, i) => i)))}
                 variant="outline"
-                className="border-green-500 text-green-500 hover:bg-green-500/10 font-mono text-xs"
+                className="border-foreground text-foreground hover:bg-muted font-mono text-xs"
               >
                 📖 {t('expandAll')}
               </Button>

@@ -40,6 +40,9 @@ export default {
     donateButton: 'Donate',
     donateButtonTooltip: 'Support the project',
     configureApiKey: 'AI API Key',
+    themeHacker: 'Hacker Theme',
+    themeDark: 'Dark Theme',
+    themeLight: 'Light Theme',
   },
   structurePanel: {
     structure: 'STRUCTURE',
