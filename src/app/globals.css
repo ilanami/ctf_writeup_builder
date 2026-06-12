@@ -153,6 +153,24 @@
   }
 }
 
+/* Code blocks — override Typography plugin defaults with theme-aware colors */
+.prose pre {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.prose pre code {
+  background-color: transparent;
+  color: inherit;
+}
+
+.prose code:not(pre code) {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 0.1em 0.3em;
+  border-radius: 0.2em;
+}
+
 /* Theme-aware button glow — neon in hacker, clean in dark/light */
 .btn-glow {
   border: 2px solid hsl(var(--foreground));

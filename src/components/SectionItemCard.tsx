@@ -10,12 +10,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useI18n, useScopedI18n } from '@/locales/client';
 
 interface SectionItemCardProps {
-  section: WriteUpSection; 
+  section: WriteUpSection;
   icon: React.ReactNode;
   onSelect: () => void;
   onDelete: () => void;
   isActive: boolean;
-  className?: string; 
+  className?: string;
+  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
 }
 
 function isValidI18nKey(key: string, t: any): boolean {
@@ -33,6 +34,7 @@ export const SectionItemCard: React.FC<SectionItemCardProps> = ({
   onDelete,
   isActive,
   className,
+  dragHandleProps,
 }) => {
   const t = useI18n();
   const tsp = useScopedI18n('structurePanel');
@@ -58,7 +60,7 @@ export const SectionItemCard: React.FC<SectionItemCardProps> = ({
       onClick={onSelect}
     >
       <CardContent className={cn("flex items-center justify-between", className?.includes('compact') ? "p-1.5" : "p-3")}> 
-        <div className={cn("flex items-center flex-grow min-w-0", className?.includes('compact') ? "gap-1" : undefined)}> 
+        <div className={cn("flex items-center flex-grow min-w-0 cursor-grab", className?.includes('compact') ? "gap-1" : undefined)} {...(dragHandleProps || {})}> 
           {icon && React.isValidElement(icon) && className?.includes('compact')
             ? React.cloneElement(icon, { ...icon.props, className: cn(icon.props?.className, "h-3 w-3 mr-1") }, icon.props.children ?? null)
             : icon}
