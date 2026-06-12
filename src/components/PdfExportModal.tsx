@@ -162,7 +162,7 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
           box-sizing: border-box;
         }
       ` }} />
-      <div className="pdf-content-container" style={{ ...previewStyle, border: '3px solid #00ff00', boxShadow: 'none' }}>
+      <div className="pdf-content-container" style={{ ...previewStyle, border: `3px solid ${currentTheme.primaryColor}`, boxShadow: 'none' }}>
         {/* Header con información general */}
         <div className="pdf-header-section">
           <h1 className="pdf-main-title" style={{ 
@@ -691,62 +691,51 @@ export const PdfExportModal: React.FC = () => {
         <Button
           variant="outline"
           size="sm"
-          className="border-2 border-[#00ff00] text-[#00ff00] bg-black shadow-[0_0_8px_#00ff00,0_0_2px_#00ff00] font-extrabold uppercase tracking-wider h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem]"
+          className="btn-glow h-6 sm:h-7 px-1.5 text-[0.80rem] sm:text-[0.90rem] uppercase tracking-wider"
         >
-          <FileSpreadsheet className="mr-1 h-3 w-3" style={{ color: '#00ff00', filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+          <FileSpreadsheet className="mr-1 h-3 w-3 icon-glow" />
           {tPdfModal('exportButton')}
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="max-w-[950px] w-full h-[95vh] p-0 m-0 flex flex-col bg-background text-foreground border-green-500" style={{ borderWidth: 3, borderColor: '#00ff00', boxShadow: 'none' }}>
+      <DialogContent className="max-w-[950px] w-full h-[95vh] p-0 m-0 flex flex-col bg-background text-foreground border-2 border-border border-glow" style={{ boxShadow: 'none' }}>
         <DialogHeader className="px-4 py-3 flex flex-row justify-between items-center" style={{ borderBottom: 'none', borderTop: 'none' }}>
-          <DialogTitle className="text-lg font-bold flex items-center" style={{ color: '#00ff00' }}>
-            <FileSpreadsheet size={20} className="mr-2" style={{ color: '#00ff00' }} />
+          <DialogTitle className="text-lg font-bold flex items-center text-glow">
+            <FileSpreadsheet size={20} className="mr-2 icon-glow" />
             {tPdfModal('exportButton')}
           </DialogTitle>
         </DialogHeader>
         
         <div className="flex flex-col flex-1 w-full h-full">
           {/* Barra superior de controles */}
-          <div className="w-full flex flex-row items-center justify-between gap-4 px-6 py-4 border-b border-green-500 bg-black" style={{ borderTop: '3px solid #00ff00' }}>
+          <div className="w-full flex flex-row items-center justify-between gap-4 px-6 py-4 border-b border-border bg-background" style={{ borderTop: '3px solid hsl(var(--foreground))' }}>
             <div className="flex flex-row items-center gap-4">
-              <span className="text-lg font-extrabold uppercase tracking-wider" style={{ color: '#00ff00', textShadow: '0 0 8px #00ff00, 0 0 2px #00ff00' }}>{tPdfModal('theme')}:</span>
-              <Button 
-                variant={theme === 'Dark' ? 'default' : 'outline'} 
+              <span className="text-lg font-extrabold uppercase tracking-wider text-glow">{tPdfModal('theme')}:</span>
+              <Button
+                variant={theme === 'Dark' ? 'default' : 'outline'}
                 className={
-                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 transition-all duration-150
-                  ${theme === 'Dark' ? 'bg-[#00ff00] text-black border-[#00ff00] shadow-[0_0_12px_#00ff00,0_0_2px_#00ff00]' : 'bg-black text-green-500 border-green-500 hover:bg-green-900 hover:text-black hover:border-[#00ff00]'}
-                  `
+                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 btn-glow transition-all duration-150`
                 }
-                style={{ boxShadow: theme === 'Dark' ? '0 0 16px #00ff00, 0 0 2px #00ff00' : undefined }}
                 onClick={() => setTheme('Dark')}
               >
                 {tPdfModal('Professional-Dark')}
               </Button>
-              <Button 
-                variant={theme === 'Light' ? 'default' : 'outline'} 
+              <Button
+                variant={theme === 'Light' ? 'default' : 'outline'}
                 className={
-                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 transition-all duration-150
-                  ${theme === 'Light' ? 'bg-[#00ff00] text-black border-[#00ff00] shadow-[0_0_12px_#00ff00,0_0_2px_#00ff00]' : 'bg-black text-green-500 border-green-500 hover:bg-green-900 hover:text-black hover:border-[#00ff00]'}
-                  `
+                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 btn-glow transition-all duration-150`
                 }
-                style={{ boxShadow: theme === 'Light' ? '0 0 16px #00ff00, 0 0 2px #00ff00' : undefined }}
                 onClick={() => setTheme('Light')}
               >
                 {tPdfModal('Professional-Light')}
               </Button>
             </div>
-            <Button 
+            <Button
               onClick={handleExport}
               disabled={isExporting}
               variant="outline"
               size="lg"
-              className={
-                theme === 'Light'
-                  ? 'h-12 px-8 text-lg font-extrabold uppercase tracking-wider border-2 border-[#007bff] text-white bg-[#007bff] hover:bg-white hover:text-[#007bff] shadow-[0_0_16px_#007bff,0_0_2px_#007bff] transition-all duration-150'
-                  : 'h-12 px-8 text-lg font-extrabold uppercase tracking-wider border-2 border-[#00ff00] text-black bg-[#00ff00] hover:bg-black hover:text-[#00ff00] shadow-[0_0_16px_#00ff00,0_0_2px_#00ff00] transition-all duration-150'
-              }
-              style={{ boxShadow: theme === 'Light' ? '0 0 16px #007bff, 0 0 2px #007bff' : '0 0 16px #00ff00, 0 0 2px #00ff00' }}
+              className="h-12 px-8 text-lg font-extrabold uppercase tracking-wider border-2 btn-glow hover:bg-primary hover:text-primary-foreground transition-all duration-150"
             > 
               <Download className="mr-2 h-6 w-6" /> 
               {isExporting ? tPdfModal('exportingButton') : tPdfModal('exportButton')} 

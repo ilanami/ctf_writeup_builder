@@ -91,19 +91,19 @@
 
   [data-theme="light"] {
     --background: 0 0% 98%;
-    --foreground: 220 15% 18%;
+    --foreground: 220 15% 15%;
     --muted: 210 15% 93%;
-    --muted-foreground: 220 10% 45%;
+    --muted-foreground: 220 10% 40%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 18%;
+    --popover-foreground: 220 15% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 18%;
+    --card-foreground: 220 15% 15%;
     --border: 210 15% 82%;
     --input: 210 15% 94%;
     --primary: 210 100% 40%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 15% 90%;
-    --secondary-foreground: 220 15% 25%;
+    --secondary-foreground: 220 15% 20%;
     --accent: 210 100% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
