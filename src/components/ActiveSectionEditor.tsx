@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor } from './WysiwygEditor';
 import { ImageUploader } from './ImageUploader';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2, ClipboardCopy, XCircle, Wand2 } from 'lucide-react';
+import { Trash2, Loader2, ClipboardCopy, XCircle, Wand2, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // import { suggestSectionContent } from '@/ai/flows/section-suggester-flow'; // Comentado para usar API Key del usuario
@@ -127,28 +127,32 @@ export const ActiveSectionEditor: React.FC = () => {
       setEditableContent(value);
       valueToDispatch = value;
     }
-    // Si estamos editando una sugerida, crear una copia real y limpiar el estado temporal
+    // Si estamos editando una sugerida, solo actualizar estado local (sin auto-commit)
+    // El usuario debe pulsar "Añadir a estructura" para confirmar
     if (editingSuggestedSection) {
-      let cleanContent = editingSuggestedSection.content;
-      if (typeof cleanContent === 'string') {
-        const lines = cleanContent.split('\n');
-        if (lines[0].trim().startsWith('##')) {
-          lines.shift();
-          cleanContent = lines.join('\n').replace(/^\n+/, ''); // Quita saltos de línea extra al inicio
-        }
-      }
-      const newSection = {
-        ...editingSuggestedSection,
-        isTemplate: false,
-        title: field === 'title' ? valueToDispatch : editableTitle,
-        content: field === 'content' ? valueToDispatch : editableContent,
-        [field]: valueToDispatch,
-      };
-      dispatch({ type: 'COMMIT_SUGGESTED_SECTION_EDIT', payload: newSection });
       return;
     }
     // Si es una sección real, actualizar normalmente
     dispatch({ type: 'UPDATE_SECTION', payload: { id: sectionToEdit.id, data: { [field]: valueToDispatch, ...extraData } } });
+  };
+
+  const handleAddToStructure = () => {
+    if (!editingSuggestedSection) return;
+    let cleanContent = editingSuggestedSection.content;
+    if (typeof cleanContent === 'string') {
+      const lines = cleanContent.split('\n');
+      if (lines[0].trim().startsWith('##')) {
+        lines.shift();
+        cleanContent = lines.join('\n').replace(/^\n+/, '');
+      }
+    }
+    const newSection = {
+      ...editingSuggestedSection,
+      isTemplate: false,
+      title: editableTitle,
+      content: editableContent,
+    };
+    dispatch({ type: 'COMMIT_SUGGESTED_SECTION_EDIT', payload: newSection });
   };
 
   const handleAddScreenshot = (screenshot: Screenshot) => {
@@ -295,7 +299,33 @@ export const ActiveSectionEditor: React.FC = () => {
   return (
     <Card className="h-full overflow-y-auto border-border">
       <CardHeader className="py-2 px-3">
-        <CardTitle className="text-sm sm:text-base font-bold text-foreground">{ta('editingSection', { title: displaySectionTitleInHeader || ta('untitledSection') })}</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm sm:text-base font-bold text-foreground">{ta('editingSection', { title: displaySectionTitleInHeader || ta('untitledSection') })}</CardTitle>
+          {editingSuggestedSection && (
+            <div className="flex flex-col gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddToStructure}
+                className="w-full border-2 border-[#00ff00] text-[#00ff00] bg-black hover:bg-[#00ff00] hover:text-black shadow-[0_0_12px_#00ff00,0_0_4px_#00ff00] font-bold uppercase tracking-wider transition-all duration-200"
+                aria-label={ta('addSection')}
+              >
+                <PlusCircle size={18} className="mr-2" style={{ filter: 'drop-shadow(0 0 4px #00ff00)' }} />
+                {ta('addSection')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => dispatch({ type: 'DISCARD_SUGGESTED_SECTION' })}
+                className="w-full border-2 border-red-500/60 text-red-400 bg-black hover:bg-red-500 hover:text-white shadow-[0_0_8px_rgba(239,68,68,0.4),0_0_2px_rgba(239,68,68,0.3)] font-bold uppercase tracking-wider transition-all duration-200"
+                aria-label={ta('discardSection')}
+              >
+                <XCircle size={18} className="mr-2" />
+                {ta('discardSection')}
+              </Button>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4 p-3">
         <div>

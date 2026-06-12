@@ -57,6 +57,8 @@ export default {
     untitledSection: 'Untitled Section',
     selectSectionToEdit: 'Select a section to edit',
     orCreateNew: 'or create a new one from the sections panel.',
+    discardSection: 'Discard section',
+    addSection: 'Add section',
     sectionTitle: 'Section Title',
     answerToQuestion: 'Answer to Question',
     flagValue: 'Flag Value',

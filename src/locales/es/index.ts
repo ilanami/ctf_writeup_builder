@@ -57,6 +57,8 @@ export default {
     untitledSection: 'Sin Título',
     selectSectionToEdit: 'Selecciona una sección para editar',
     orCreateNew: 'o crea una nueva sección desde el panel de secciones.',
+    discardSection: 'Descartar sección',
+    addSection: 'Añadir sección',
     sectionTitle: 'Título de la Sección',
     answerToQuestion: 'Respuesta a la Pregunta',
     flagValue: 'Valor de la Flag',

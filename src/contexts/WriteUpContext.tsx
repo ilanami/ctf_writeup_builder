@@ -28,6 +28,7 @@ type WriteUpAction =
   | { type: 'SET_MACHINE_IMAGE'; payload: Screenshot | undefined }
   | { type: 'SET_ACTIVE_SECTION'; payload: string | null }
   | { type: 'SET_VIEW'; payload: AppView }
+  | { type: 'DISCARD_SUGGESTED_SECTION' }
   | { type: 'RESET_WRITEUP' }
   | { type: 'SET_IS_DIRTY', payload: boolean }
   | { type: 'SET_EDITING_SUGGESTED_SECTION'; payload: WriteUpSection | null }
@@ -194,10 +195,13 @@ const writeUpReducer = (state: WriteUpState, action: WriteUpAction): WriteUpStat
       newState = { ...newState, writeUp: { ...state.writeUp, machineImage: action.payload } };
       break;
     case 'SET_ACTIVE_SECTION':
-      newState = { ...state, activeSectionId: action.payload };
+      newState = { ...state, activeSectionId: action.payload, editingSuggestedSection: null };
       break;
     case 'SET_VIEW':
-      newState = { ...state, currentView: action.payload };
+      newState = { ...state, currentView: action.payload, editingSuggestedSection: null };
+      break;
+    case 'DISCARD_SUGGESTED_SECTION':
+      newState = { ...state, editingSuggestedSection: null };
       break;
     case 'RESET_WRITEUP':
       const defaultWriteUp = createDefaultWriteUp(); 
