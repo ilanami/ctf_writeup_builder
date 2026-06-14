@@ -193,7 +193,7 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
               </div>
             )}
             {writeUp.author && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('authorLabel')}:</strong> {writeUp.author}</p>}
-            {writeUp.date && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('dateLabel')}:</strong> {format(parseISO(writeUp.date), "PPP", { locale: dateLocale })}</p>}
+            {writeUp.date && (() => { try { return <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('dateLabel')}:</strong> {format(parseISO(writeUp.date!), "PPP", { locale: dateLocale })}</p>; } catch { return null; } })()}
             {writeUp.difficulty && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('difficultyLabel')}:</strong> {tDifficulties(writeUp.difficulty as any)}</p>}
             {writeUp.os && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('osLabel')}:</strong> {tOS(writeUp.os as any)}</p>}
             {writeUp.tags && writeUp.tags.length > 0 && <p style={{ margin: '1pt 0' }}><strong>{tPdfModal('tagsLabel')}:</strong> {writeUp.tags.join(', ')}</p>}
@@ -280,7 +280,7 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
                           style={{
                             maxWidth: '100%',
                             height: 'auto',
-                            border: `1px solid ${currentTheme.borderColor}`,
+                            border: 'none',
                             borderRadius: '3px',
                             marginTop: '2pt',
                             marginBottom: '2pt',
@@ -311,8 +311,9 @@ const PdfDocumentContent: React.FC<PdfDocumentContentProps> = ({ writeUp, option
 };
 
 const SIMPLE_PDF_THEMES_CONFIG = {
+  Hacker: PDF_THEMES_CONFIG['Hacker'],
+  Dark: PDF_THEMES_CONFIG['Professional-Dark'],
   Light: PDF_THEMES_CONFIG['Professional-Light'],
-  Dark: PDF_THEMES_CONFIG['Hacker'],
 };
 
 interface PdfExportModalProps {
@@ -320,16 +321,258 @@ interface PdfExportModalProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+type PdfThemeKey = 'Hacker' | 'Dark' | 'Light';
+type ImageRegion = { top: number; bottom: number }; // canvas pixels (scale:2)
+type RenderedPiece = {
+  canvas: HTMLCanvasElement;
+  scaledH: number;          // effective height in PDF points (excluding blank top)
+  imageRegions: ImageRegion[]; // in full canvas coordinates
+  srcStartY: number;        // first content row — blank top margin is skipped
+};
+
+// Layout constants (pt)
+const MARGIN_H = 42;
+const MARGIN_T = 40;
+const MARGIN_B = 40;
+const FOOTER_H = 18;
+const PAGE_W_PT = 595.28;
+const PAGE_H_PT = 841.89;
+const CONTENT_W_PT = PAGE_W_PT - MARGIN_H * 2;
+const USABLE_H_PT = PAGE_H_PT - MARGIN_T - MARGIN_B - FOOTER_H;
+const RENDER_PX = Math.round(CONTENT_W_PT * (96 / 72)); // px width at screen dpi
+
+// Returns the first canvas row that differs from the background color.
+// Used to skip blank top-margin space so sections don't get extra padding at page tops.
+const findContentStart = (canvas: HTMLCanvasElement, bgHex: string): number => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || canvas.height === 0) return 0;
+  const rr = parseInt(bgHex.slice(1, 3), 16);
+  const rg = parseInt(bgHex.slice(3, 5), 16);
+  const rb = parseInt(bgHex.slice(5, 7), 16);
+  const w = canvas.width;
+  const maxCheck = Math.min(120, canvas.height); // up to 60pt at scale:2
+  const data = ctx.getImageData(0, 0, w, maxCheck).data;
+  for (let row = 0; row < maxCheck; row++) {
+    const off = row * w * 4;
+    for (let x = 0; x < w; x++) {
+      const i = off + x * 4;
+      if (Math.abs(data[i] - rr) > 10 || Math.abs(data[i + 1] - rg) > 10 || Math.abs(data[i + 2] - rb) > 10) {
+        return row;
+      }
+    }
+  }
+  return 0;
+};
+
+// Returns the row with minimum pixel brightness variance within [yStart, yEnd].
+// Low variance = uniform row = safe cut point.
+const findBestCutRow = (
+  canvas: HTMLCanvasElement,
+  yStart: number,
+  yEnd: number
+): { row: number; variance: number } | null => {
+  const y0 = Math.max(0, Math.floor(yStart));
+  const y1 = Math.min(canvas.height - 1, Math.floor(yEnd));
+  if (y0 >= y1) return null;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const h = y1 - y0 + 1;
+  const w = canvas.width;
+  const data = ctx.getImageData(0, y0, w, h).data;
+  let bestRow = y0;
+  let minVar = Infinity;
+  for (let row = 0; row < h; row++) {
+    const off = row * w * 4;
+    let sum = 0;
+    for (let x = 0; x < w; x++) {
+      const i = off + x * 4;
+      sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    }
+    const mean = sum / w;
+    let v = 0;
+    for (let x = 0; x < w; x++) {
+      const i = off + x * 4;
+      const b = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      v += (b - mean) ** 2;
+    }
+    v /= w;
+    if (v < minVar) { minVar = v; bestRow = y0 + row; }
+    if (v < 1) break; // perfect uniform row — stop early
+  }
+  return { row: bestRow, variance: minVar };
+};
+
+interface LayoutRenderer {
+  addContent(canvas: HTMLCanvasElement, xPt: number, yPt: number, wPt: number, hPt: number): void;
+  onNewPage(completedPageNum: number, totalPages: number): void;
+}
+
+// Smart layout: places RenderedPieces across pages with content-aware cut detection.
+// For every page break it first searches for a low-variance (blank) row within
+// the search window before the cut point (never past it, to avoid margin overflow).
+// When the cut falls inside an image and no clean row is found, the image is scaled
+// to fill the remaining space on the current page.
+const doLayout = (
+  pieces: RenderedPiece[],
+  totalPages: number,
+  bgColor: string,
+  renderer: LayoutRenderer
+): void => {
+  const CLEAN_WINDOW = 80;     // px to search BEFORE the ideal cut for a clean row
+  const CLEAN_MAX_VAR = 30;    // max variance to qualify as a clean row
+  const MIN_IMG_SPACE_PT = 80; // min remaining pt before placing an image on current page
+
+  let curY = MARGIN_T;
+  let pageNum = 1;
+
+  const availPt = () => MARGIN_T + USABLE_H_PT - curY;
+
+  const goNewPage = () => {
+    renderer.onNewPage(pageNum, totalPages);
+    pageNum++;
+    curY = MARGIN_T;
+  };
+
+  const makeSubCanvas = (src: HTMLCanvasElement, srcY: number, srcH: number): HTMLCanvasElement => {
+    if (srcH <= 0) { const sc = document.createElement('canvas'); sc.width = 1; sc.height = 1; return sc; }
+    const h = Math.max(1, Math.ceil(srcH));
+    const sc = document.createElement('canvas');
+    sc.width = src.width; sc.height = h;
+    const ctx = sc.getContext('2d')!;
+    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, sc.width, h);
+    ctx.drawImage(src, 0, srcY, src.width, srcH, 0, 0, src.width, h);
+    return sc;
+  };
+
+  const makeScaledCanvas = (src: HTMLCanvasElement, srcY: number, srcH: number, sf: number): HTMLCanvasElement => {
+    if (srcH <= 0 || sf <= 0) { const sc = document.createElement('canvas'); sc.width = 1; sc.height = 1; return sc; }
+    const tw = Math.max(1, Math.round(src.width * sf));
+    const th = Math.max(1, Math.round(srcH * sf));
+    const sc = document.createElement('canvas');
+    sc.width = tw; sc.height = th;
+    const ctx = sc.getContext('2d')!;
+    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, tw, th);
+    ctx.drawImage(src, 0, srcY, src.width, srcH, 0, 0, tw, th);
+    return sc;
+  };
+
+  for (const { canvas, imageRegions, srcStartY } of pieces) {
+    const ratio = CONTENT_W_PT / canvas.width;
+    let srcY = srcStartY;
+
+    while (srcY < canvas.height) {
+      // Guard: curY may be slightly past the limit (e.g. inter-section +6 gap pushed it over)
+      const avail = availPt();
+      if (avail <= 0) { goNewPage(); continue; }
+
+      const availPx = avail / ratio;
+      const remaining = canvas.height - srcY;
+
+      if (remaining <= availPx + 0.5) {
+        // Everything remaining fits on this page
+        renderer.addContent(makeSubCanvas(canvas, srcY, remaining), MARGIN_H, curY, CONTENT_W_PT, remaining * ratio);
+        curY += remaining * ratio + 6;
+        srcY = canvas.height;
+        break;
+      }
+
+      // Hard cap: the cut must never exceed this row, to prevent overflowing the bottom margin
+      const maxCutPx = Math.round(srcY + availPx);
+      const idealCutPx = srcY + availPx;
+
+      // Check whether the cut lands inside an image region
+      const hitImg = imageRegions.find(r => idealCutPx > r.top + 4 && idealCutPx < r.bottom - 4);
+
+      // Search for a clean (low-variance) row in the window BEFORE the ideal cut.
+      // For images we also look slightly past the image bottom so it can stay intact.
+      const searchStart = Math.max(srcY + 1, Math.round(idealCutPx - CLEAN_WINDOW));
+      const searchEnd = hitImg
+        ? Math.min(canvas.height - 1, Math.round(idealCutPx + CLEAN_WINDOW)) // peek past image
+        : maxCutPx; // for text: strictly before the page limit
+      const best = findBestCutRow(canvas, searchStart, searchEnd);
+      // Cap the found row so it never exceeds the available space
+      const cleanCutPx = (best && best.variance <= CLEAN_MAX_VAR)
+        ? Math.min(best.row, maxCutPx)
+        : null;
+
+      if (!hitImg) {
+        // ── TEXT CUT: use clean row if found, otherwise cut at ideal position
+        const cutPx = cleanCutPx ?? maxCutPx;
+        const slicePx = cutPx - srcY;
+        if (slicePx > 0) {
+          renderer.addContent(makeSubCanvas(canvas, srcY, slicePx), MARGIN_H, curY, CONTENT_W_PT, slicePx * ratio);
+          curY += slicePx * ratio;
+        }
+        srcY = cutPx;
+        goNewPage();
+
+      } else if (cleanCutPx !== null) {
+        // ── IMAGE CUT, clean row found — cut there
+        const slicePx = cleanCutPx - srcY;
+        if (slicePx > 1) {
+          renderer.addContent(makeSubCanvas(canvas, srcY, slicePx), MARGIN_H, curY, CONTENT_W_PT, slicePx * ratio);
+          curY += slicePx * ratio;
+        }
+        srcY = cleanCutPx;
+        goNewPage();
+
+      } else {
+        // ── IMAGE CUT, no clean row — draw content above image, scale image to fit
+
+        // 1. Content above the image (never regress srcY)
+        const imgStart = Math.max(srcY, hitImg.top);
+        const abovePx = imgStart - srcY;
+        if (abovePx > 2) {
+          renderer.addContent(makeSubCanvas(canvas, srcY, abovePx), MARGIN_H, curY, CONTENT_W_PT, abovePx * ratio);
+          curY += abovePx * ratio;
+        }
+        srcY = imgStart;
+
+        // 2. Scale image to fill remaining page space
+        const imgPx = hitImg.bottom - imgStart;
+        if (imgPx <= 0) { srcY = hitImg.bottom; continue; }
+
+        const imgHpt = imgPx * ratio;
+        let spacePt = availPt();
+        if (spacePt < MIN_IMG_SPACE_PT) { goNewPage(); spacePt = availPt(); }
+
+        const targetHpt = Math.min(imgHpt, spacePt);
+        const sf = targetHpt / imgHpt;
+        renderer.addContent(makeScaledCanvas(canvas, imgStart, imgPx, sf), MARGIN_H, curY, CONTENT_W_PT * sf, targetHpt);
+        curY += targetHpt;
+        srcY = hitImg.bottom;
+
+        if (availPt() < 10) goNewPage();
+      }
+    }
+  }
+};
+
+// Dry run — counts total pages without drawing anything
+const countPages = (pieces: RenderedPiece[], bgColor: string): number => {
+  let n = 1;
+  doLayout(pieces, 0, bgColor, {
+    addContent: () => {},
+    onNewPage: () => { n++; },
+  });
+  return n;
+};
+
 export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOpen, onOpenChange: externalOnOpenChange }) => {
   const { state } = useWriteUp();
   const { writeUp } = state;
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = externalOpen ?? internalOpen;
   const setIsOpen = externalOnOpenChange ?? setInternalOpen;
-  const [theme, setTheme] = useState<'Light' | 'Dark'>('Dark');
+  const [theme, setTheme] = useState<PdfThemeKey>('Dark');
   const { toast } = useToast();
   const exportContentRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [previewPages, setPreviewPages] = useState<string[]>([]);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [previewProgress, setPreviewProgress] = useState<{ current: number; total: number } | null>(null);
+  const cachedPiecesRef = useRef<RenderedPiece[] | null>(null);
+  const cachedThemeRef = useRef<PdfThemeKey | null>(null);
 
   const currentLocale = useCurrentLocale();
   const tPdfModal = useScopedI18n('pdfModal');
@@ -338,6 +581,154 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOp
   const tt = useScopedI18n('toasts');
 
   const currentThemeConfig = SIMPLE_PDF_THEMES_CONFIG[theme];
+
+  // Renders each section to a canvas, capturing image bounding regions for smart layout
+  const renderPieces = async (
+    html2canvas: any,
+    onProgress?: (current: number, total: number) => void
+  ): Promise<RenderedPiece[]> => {
+    const container = exportContentRef.current?.querySelector('.pdf-content-container') as HTMLElement | null;
+    if (!container) return [];
+
+    const headerEl = container.querySelector('.pdf-header-section') as HTMLElement | null;
+    const sectionEls = Array.from(container.querySelectorAll('.pdf-section')) as HTMLElement[];
+    const elements = [...(headerEl ? [headerEl] : []), ...sectionEls];
+    const bg = currentThemeConfig.backgroundColor;
+    const pieces: RenderedPiece[] = [];
+
+    for (let i = 0; i < elements.length; i++) {
+      onProgress?.(i + 1, elements.length);
+      const el = elements[i];
+      const clone = el.cloneNode(true) as HTMLElement;
+      Object.assign(clone.style, {
+        position: 'fixed', top: '-99999px', left: '-99999px',
+        width: `${RENDER_PX}px`, maxWidth: `${RENDER_PX}px`,
+        margin: '0', boxSizing: 'border-box',
+      });
+      clone.querySelectorAll('img').forEach((img) => {
+        const im = img as HTMLImageElement;
+        im.style.maxHeight = '260px';
+        im.style.objectFit = 'contain';
+        im.style.maxWidth = '100%';
+        im.style.width = 'auto';
+      });
+      document.body.appendChild(clone);
+
+      // Wait two frames so the browser finishes layout before measuring
+      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+      // Capture image bounding boxes relative to the clone (in canvas pixels at scale:2)
+      const cloneRect = clone.getBoundingClientRect();
+      const imageRegions: ImageRegion[] = [];
+      clone.querySelectorAll('img').forEach((img) => {
+        const r = (img as HTMLElement).getBoundingClientRect();
+        if (r.height > 0) {
+          imageRegions.push({
+            top: Math.max(0, Math.round((r.top - cloneRect.top) * 2) - 4),
+            bottom: Math.round((r.bottom - cloneRect.top) * 2) + 4,
+          });
+        }
+      });
+
+      const canvas = await html2canvas(clone, {
+        scale: 2, useCORS: true, allowTaint: true,
+        backgroundColor: bg, width: RENDER_PX, windowWidth: RENDER_PX,
+      });
+      document.body.removeChild(clone);
+      const srcStartY = findContentStart(canvas, bg);
+      const ratio = CONTENT_W_PT / canvas.width;
+      pieces.push({ canvas, scaledH: (canvas.height - srcStartY) * ratio, imageRegions, srcStartY });
+    }
+    return pieces;
+  };
+
+  // Lays out pieces into page canvases using the smart doLayout algorithm
+  const buildPageCanvases = (pieces: RenderedPiece[], totalPages: number): HTMLCanvasElement[] => {
+    const bg = currentThemeConfig.backgroundColor;
+    const PX_PER_PT = 1.5;
+    const pageWpx = Math.round(PAGE_W_PT * PX_PER_PT);
+    const pageHpx = Math.round(PAGE_H_PT * PX_PER_PT);
+    const marginBpx = Math.round(MARGIN_B * PX_PER_PT);
+    const footerHpx = Math.round(FOOTER_H * PX_PER_PT);
+
+    const createPageCanvas = (): [HTMLCanvasElement, CanvasRenderingContext2D] => {
+      const c = document.createElement('canvas');
+      c.width = pageWpx; c.height = pageHpx;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, pageWpx, pageHpx);
+      return [c, ctx];
+    };
+
+    const pages: HTMLCanvasElement[] = [];
+    let [curPage, ctx] = createPageCanvas();
+    let lastPageNum = 1;
+
+    const drawPageNumber = (num: number, total: number) => {
+      ctx.fillStyle = '#888888';
+      ctx.font = `${Math.round(8 * PX_PER_PT)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${num} / ${total}`, pageWpx / 2, pageHpx - marginBpx + footerHpx / 2);
+    };
+
+    doLayout(pieces, totalPages, bg, {
+      addContent: (canvas, xPt, yPt, wPt, hPt) => {
+        ctx.drawImage(
+          canvas, 0, 0, canvas.width, canvas.height,
+          Math.round(xPt * PX_PER_PT), Math.round(yPt * PX_PER_PT),
+          Math.round(wPt * PX_PER_PT), Math.round(hPt * PX_PER_PT)
+        );
+      },
+      onNewPage: (completedNum, total) => {
+        drawPageNumber(completedNum, total);
+        pages.push(curPage);
+        [curPage, ctx] = createPageCanvas();
+        lastPageNum = completedNum + 1;
+      },
+    });
+
+    drawPageNumber(lastPageNum, totalPages);
+    pages.push(curPage);
+    return pages;
+  };
+
+  // Generate preview: render pieces → count pages → build page canvases → store as data URLs
+  const generatePreview = React.useCallback(async (attempt = 0) => {
+    // The hidden container is mounted conditionally on isOpen. In development
+    // with StrictMode / Fast Refresh the ref may not be populated yet when this
+    // effect first fires, so retry a few frames before giving up.
+    if (!exportContentRef.current) {
+      if (attempt < 10) {
+        requestAnimationFrame(() => generatePreview(attempt + 1));
+      }
+      return;
+    }
+    setIsGeneratingPreview(true);
+    setPreviewPages([]);
+    setPreviewProgress(null);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const pieces = await renderPieces(html2canvas, (current, total) => {
+        setPreviewProgress({ current, total });
+      });
+      cachedPiecesRef.current = pieces;
+      cachedThemeRef.current = theme;
+      setPreviewProgress(null);
+      const total = countPages(pieces, currentThemeConfig.backgroundColor);
+      const pageCanvases = buildPageCanvases(pieces, total);
+      setPreviewPages(pageCanvases.map(c => c.toDataURL('image/jpeg', 0.85)));
+    } catch (e) {
+      console.error('PDF preview generation error:', e);
+    } finally {
+      setIsGeneratingPreview(false);
+      setPreviewProgress(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, isOpen]);
+
+  React.useEffect(() => {
+    if (isOpen) generatePreview();
+  }, [isOpen, theme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generatePdfStyles = (): string => {
     return `
@@ -497,13 +888,14 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOp
       img.pdf-screenshot-image {
         max-width: 100%;
         height: auto;
-        border: 1px solid ${currentThemeConfig.borderColor};
-        border-radius: 3px;
+        border: none;
+        border-radius: 0;
         margin: 2pt 0;
         page-break-inside: avoid;
         display: block;
-        max-height: 180px; /* Limitamos altura para aprovechar mejor el espacio */
+        max-height: 180px;
         object-fit: contain;
+        background: transparent;
       }
 
       /* Citas - más compactas */
@@ -587,103 +979,99 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOp
 
   const handleExport = async () => {
     if (!exportContentRef.current) {
-      toast({ 
-        title: tPdfModal('errorPreparingPDF'), 
-        description: tPdfModal('couldNotFindContentToExport'), 
-        variant: "destructive" 
-      });
+      toast({ title: tPdfModal('errorPreparingPDF'), description: tPdfModal('couldNotFindContentToExport'), variant: "destructive" });
       return;
     }
 
     setIsExporting(true);
-    toast({ 
-      title: tt('info'),
-      description: tt('pdfExportStarted'),
-    });
+    toast({ title: tt('info'), description: tt('pdfExportStarted') });
 
     try {
-      // Crear iframe para la impresión
-      const printFrame = document.createElement('iframe');
-      printFrame.style.position = 'absolute';
-      printFrame.style.left = '-9999px';
-      printFrame.style.top = '-9999px';
-      printFrame.style.width = '210mm';
-      printFrame.style.height = '297mm';
-      document.body.appendChild(printFrame);
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
 
-      // Esperar a que el iframe se cargue
-      await new Promise<void>((resolve) => {
-        printFrame.onload = () => resolve();
-        printFrame.src = 'about:blank';
+      // Reuse cached pieces if theme matches, otherwise re-render
+      const pieces: RenderedPiece[] = (cachedPiecesRef.current && cachedThemeRef.current === theme)
+        ? cachedPiecesRef.current
+        : await renderPieces(html2canvas);
+
+      if (pieces.length === 0) throw new Error('No content to export');
+
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+      const PAGE_W = pdf.internal.pageSize.getWidth();
+      const PAGE_H = pdf.internal.pageSize.getHeight();
+      const bg = currentThemeConfig.backgroundColor;
+
+      // Fill each PDF page with the theme background color.
+      // jsPDF creates white pages by default — without this the gaps between
+      // section canvases (and blank space at the bottom of pages) show as white
+      // even for Dark/Hacker themes.
+      const fillPageBg = () => {
+        const h = bg.replace('#', '');
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b2 = parseInt(h.slice(4, 6), 16);
+        pdf.setFillColor(r, g, b2);
+        pdf.rect(0, 0, PAGE_W, PAGE_H, 'F');
+      };
+
+      // Count total pages (dry run — uses same smart algorithm as preview)
+      const totalPagesCount = countPages(pieces, bg);
+
+      // Render to PDF using the shared doLayout engine
+      let exportPageNum = 1;
+
+      const addPageNumber = (num: number, total: number) => {
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`${num} / ${total}`, PAGE_W / 2, PAGE_H - MARGIN_B + FOOTER_H / 2, { align: 'center' });
+      };
+
+      // Fill the first page background before adding any content
+      fillPageBg();
+
+      doLayout(pieces, totalPagesCount, bg, {
+        addContent: (canvas, xPt, yPt, wPt, hPt) => {
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', xPt, yPt, wPt, hPt);
+        },
+        onNewPage: (completedNum, total) => {
+          addPageNumber(completedNum, total);
+          pdf.addPage();
+          fillPageBg(); // fill background before adding content to the new page
+          exportPageNum = completedNum + 1;
+        },
       });
 
-      const frameDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-      if (!frameDoc) throw new Error('Could not access iframe document');
+      addPageNumber(exportPageNum, totalPagesCount);
 
-      // Obtener el contenido HTML del componente
-      const contentElement = exportContentRef.current.querySelector('.pdf-content-container');
-      if (!contentElement) throw new Error('Content element not found');
+      const safeName = (writeUp.title || 'writeup')
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .toLowerCase() || 'writeup';
 
-      // Crear el HTML completo para imprimir
-      const htmlToPrint = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>${writeUp.title || 'WriteUp Export'}</title>
-          <style>
-            ${generatePdfStyles()}
-          </style>
-        </head>
-        <body>
-          ${contentElement.outerHTML}
-        </body>
-        </html>
-      `;
+      pdf.save(`${safeName}.pdf`);
+      toast({ title: tPdfModal('pdfExportSuccess'), description: tPdfModal('pdfExportedSuccessfully') });
 
-      // Escribir el contenido en el iframe
-      frameDoc.open();
-      frameDoc.write(htmlToPrint);
-      frameDoc.close();
-
-      // Esperar un momento para que se renderice completamente
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Imprimir
-      const printWindow = printFrame.contentWindow;
-      if (!printWindow) throw new Error('Could not access print window');
-
-      // Limpiar después de imprimir o cancelar (no mostrar toast de éxito)
-      printWindow.addEventListener('afterprint', () => {
-        document.body.removeChild(printFrame);
-        setIsExporting(false);
-      });
-
-      printWindow.print();
-
-    } catch (error: any) {
+    } catch (error) {
       console.error('PDF Export Error:', error);
-      toast({ 
-        title: tPdfModal('exportError'), 
-        description: tPdfModal('pdfExportFailed', { errorMessage: '' }), 
-        variant: "destructive", 
-        duration: 9000 
-      });
+      toast({ title: tPdfModal('exportError'), description: tPdfModal('pdfExportFailed', { errorMessage: '' }), variant: "destructive", duration: 9000 });
+    } finally {
       setIsExporting(false);
     }
   };
 
   const pdfPreviewContent = (
     <I18nProviderClient locale={currentLocale}>
-      <PdfDocumentContent 
-        writeUp={writeUp} 
-        options={{ 
-          ...DEFAULT_PDF_EXPORT_OPTIONS, 
-          theme: theme === 'Dark' ? 'Hacker' : 'Professional-Light', 
-          pageSize: 'A4', 
-          orientation: 'Vertical' 
+      <PdfDocumentContent
+        writeUp={writeUp}
+        options={{
+          ...DEFAULT_PDF_EXPORT_OPTIONS,
+          theme: theme === 'Hacker' ? 'Hacker' : theme === 'Dark' ? 'Professional-Dark' : 'Professional-Light',
+          pageSize: 'A4',
+          orientation: 'Vertical'
         }}
-        pdfStyles={generatePdfStyles()} 
+        pdfStyles={generatePdfStyles()}
         currentLocale={currentLocale}
         tDifficulties={tDifficulties}
         tOS={tOS}
@@ -705,63 +1093,65 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOp
         <div className="flex flex-col flex-1 w-full h-full">
           {/* Barra superior de controles */}
           <div className="w-full flex flex-row items-center justify-between gap-4 px-6 py-4 border-b border-border bg-background" style={{ borderTop: '3px solid hsl(var(--foreground))' }}>
-            <div className="flex flex-row items-center gap-4">
-              <span className="text-lg font-extrabold uppercase tracking-wider text-glow">{tPdfModal('theme')}:</span>
-              <Button
-                variant={theme === 'Dark' ? 'default' : 'outline'}
-                className={
-                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 btn-glow transition-all duration-150`
-                }
-                onClick={() => setTheme('Dark')}
-              >
-                {tPdfModal('Professional-Dark')}
-              </Button>
-              <Button
-                variant={theme === 'Light' ? 'default' : 'outline'}
-                className={
-                  `h-10 px-6 text-base font-extrabold uppercase tracking-wider border-2 btn-glow transition-all duration-150`
-                }
-                onClick={() => setTheme('Light')}
-              >
-                {tPdfModal('Professional-Light')}
-              </Button>
+            <div className="flex flex-row items-center gap-4 flex-wrap">
+              <span className="text-sm font-extrabold uppercase tracking-wider text-glow">{tPdfModal('theme')}:</span>
+              {(['Hacker', 'Dark', 'Light'] as PdfThemeKey[]).map((t) => (
+                <Button
+                  key={t}
+                  variant={theme === t ? 'default' : 'outline'}
+                  className="h-9 px-5 text-sm font-bold uppercase tracking-wider border-2 btn-glow transition-all duration-150"
+                  onClick={() => setTheme(t)}
+                  disabled={isGeneratingPreview}
+                >
+                  {tPdfModal(t as any)}
+                </Button>
+              ))}
             </div>
             <Button
               onClick={handleExport}
-              disabled={isExporting}
+              disabled={isExporting || isGeneratingPreview}
               variant="outline"
               size="lg"
               className="h-12 px-8 text-lg font-extrabold uppercase tracking-wider border-2 btn-glow hover:bg-primary hover:text-primary-foreground transition-all duration-150"
-            > 
-              <Download className="mr-2 h-6 w-6" /> 
-              {isExporting ? tPdfModal('exportingButton') : tPdfModal('exportButton')} 
+            >
+              <Download className="mr-2 h-6 w-6" />
+              {isExporting ? tPdfModal('exportingButton') : tPdfModal('exportButton')}
             </Button>
           </div>
-          {/* Preview centrado y ancho máximo */}
-          <div className="flex-1 flex justify-center items-start overflow-auto bg-neutral-900 py-8">
+
+          {/* Preview paginado — muestra exactamente cómo quedará el PDF */}
+          <div className="flex-1 flex flex-col items-center overflow-auto bg-neutral-900 py-8 gap-6">
+            {/* Contenedor oculto que renderiza el contenido para html2canvas */}
             {isOpen && (
-              <div
-                ref={exportContentRef}
-                className="pdf-preview-a4"
-                style={{
-                  width: 850,
-                  minHeight: 1123,
-                  background: currentThemeConfig.backgroundColor,
-                  color: currentThemeConfig.textColor,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  alignItems: 'stretch',
-                  position: 'relative',
-                  margin: '0 auto',
-                  boxShadow: 'none',
-                  border: 'none',
-                  padding: '32px 36px 36px 36px'
-                }}
-              >
+              <div ref={exportContentRef} style={{ position: 'absolute', top: '-99999px', left: '-99999px', pointerEvents: 'none' }}>
                 {pdfPreviewContent}
               </div>
             )}
+
+            {isGeneratingPreview && (
+              <div className="flex flex-col items-center justify-center gap-3 text-neutral-400 mt-16">
+                <div className="h-8 w-8 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm font-mono">
+                  {previewProgress
+                    ? `Procesando sección ${previewProgress.current} de ${previewProgress.total}...`
+                    : tPdfModal('processingPDF')}
+                </span>
+              </div>
+            )}
+
+            {!isGeneratingPreview && previewPages.length === 0 && (
+              <div className="text-neutral-500 text-sm font-mono mt-16">{tPdfModal('previewHiddenDesc')}</div>
+            )}
+
+            {!isGeneratingPreview && previewPages.map((dataUrl, i) => (
+              <div key={i} className="shadow-2xl" style={{ width: 'min(680px, 90vw)' }}>
+                <img
+                  src={dataUrl}
+                  alt={`Page ${i + 1}`}
+                  style={{ width: '100%', display: 'block', border: `2px solid ${currentThemeConfig.borderColor}` }}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </DialogContent>
