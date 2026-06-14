@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GeneralInfoPanel } from './GeneralInfoPanel';
 import { ActiveSectionEditor } from './ActiveSectionEditor';
 import { WriteUpPreview } from './WriteUpPreview';
 import { useWriteUp } from '@/hooks/useWriteUp';
 import { Button } from './ui/button';
-import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info, Terminal, Moon, Sun, FolderOpen, Pencil, FileDown, Palette } from 'lucide-react';
+import { Eye, Edit3, FileText, Download, Upload, Save, AlertTriangle, PlusCircle, TerminalSquare, ListChecks, PlaySquare, HelpCircle, Flag as FlagIcon, FileType, Languages, Coffee, Gift, KeyRound, Wand2, FileArchive, Info, Terminal, Moon, Sun, FolderOpen, Pencil, FileDown } from 'lucide-react';
 import { useAppTheme } from '@/contexts/ThemeContext';
 import { PdfExportModal } from './PdfExportModal';
 import { useToast } from '@/hooks/use-toast';
@@ -14,14 +14,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
-  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
   DropdownMenuRadioGroup, DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { SectionType, WriteUpSection, WriteUp, Screenshot } from '@/lib/types';
 import { SECTION_TYPES_KEYS, getSectionItemIcon, LOCAL_STORAGE_KEY, STORAGE_KEYS, createDefaultSection, DEFAULT_SECTIONS_TEMPLATE_KEYS } from '@/lib/constants';
-import { SectionItemCard } from './SectionItemCard';
+import { MemoizedSectionItemCard } from './SectionItemCard';
 import { ScrollArea } from './ui/scroll-area';
 import { format, parseISO } from 'date-fns';
 import { es, enUS } from 'date-fns/locale';
@@ -744,25 +743,6 @@ const AppHeader: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="bg-background text-foreground border-border">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Palette className="mr-2 h-4 w-4" /> {th('temas')}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-background text-foreground border-border">
-                  <DropdownMenuRadioGroup value={theme} onValueChange={(t) => setTheme(t as 'hacker' | 'dark' | 'light')}>
-                    <DropdownMenuRadioItem value="hacker">
-                      <Terminal className="mr-2 h-4 w-4" /> {th('themeHacker')}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="dark">
-                      <Moon className="mr-2 h-4 w-4" /> {th('themeDark')}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="light">
-                      <Sun className="mr-2 h-4 w-4" /> {th('themeLight')}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsHelpOpen(true)}>
                 <HelpCircle className="mr-2 h-4 w-4" /> {t('help.title')}
               </DropdownMenuItem>
@@ -775,6 +755,38 @@ const AppHeader: React.FC = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Temas */}
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1 hidden sm:inline">
+            {th('temas')}:
+          </span>
+          <Button
+            variant={theme === 'hacker' ? 'default' : 'outline'}
+            size="icon"
+            className="btn-glow"
+            onClick={() => setTheme('hacker')}
+            aria-label={th('themeHacker')}
+          >
+            <Terminal size={16} />
+          </Button>
+          <Button
+            variant={theme === 'dark' ? 'default' : 'outline'}
+            size="icon"
+            className="btn-glow"
+            onClick={() => setTheme('dark')}
+            aria-label={th('themeDark')}
+          >
+            <Moon size={16} />
+          </Button>
+          <Button
+            variant={theme === 'light' ? 'default' : 'outline'}
+            size="icon"
+            className="btn-glow"
+            onClick={() => setTheme('light')}
+            aria-label={th('themeLight')}
+          >
+            <Sun size={16} />
+          </Button>
 
           {/* Auto-save indicator */}
           <span className="text-xs text-muted-foreground ml-2" aria-live="polite">
@@ -896,19 +908,19 @@ const StructureAndAddSectionsPanel: React.FC = () => {
     dispatch({ type: 'SET_EDITING_SUGGESTED_SECTION', payload: { ...tempSection, isTemplate: true } });
   };
 
-  const handleSelectSection = (id: string) => {
+  const handleSelectSection = useCallback((id: string) => {
     dispatch({ type: 'SET_ACTIVE_SECTION', payload: id });
-  };
+  }, [dispatch]);
 
-  const handleDeleteSection = (id: string) => {
+  const handleDeleteSection = useCallback((id: string) => {
     dispatch({ type: 'DELETE_SECTION', payload: id });
-  };
-  
+  }, [dispatch]);
+
   const userSections = writeUp.sections.filter(s => !s.isTemplate);
   const templateSections = writeUp.sections.filter(s => s.isTemplate);
 
   // Drag & Drop handler
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -919,7 +931,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
     const reordered = arrayMove(userSections, oldIndex, newIndex);
     // Mantén las plantillas sugeridas al final
     dispatch({ type: 'REORDER_SECTIONS', payload: [...reordered, ...templateSections] });
-  };
+  }, [dispatch, userSections, templateSections]);
 
   return (
     <div className="p-2 space-y-1 h-full flex flex-col bg-card rounded-lg shadow-md border-r-4 border-border border-glow">
@@ -982,7 +994,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                        const Icon = getSectionItemIcon(section.type, section.title);
                        const displayTitle = t(section.title as any, {});
                        return (
-                         <SectionItemCard
+                         <MemoizedSectionItemCard
                           key={section.id}
                           section={{...section, title: displayTitle}}
                           icon={<Icon size={16} className="mr-2 flex-shrink-0 text-foreground/70" />}

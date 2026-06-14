@@ -104,3 +104,6 @@ export const SectionItemCard: React.FC<SectionItemCardProps> = ({
     </Card>
   );
 };
+
+export const MemoizedSectionItemCard = React.memo(SectionItemCard);
+export default MemoizedSectionItemCard;
