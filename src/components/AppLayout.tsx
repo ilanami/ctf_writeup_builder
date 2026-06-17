@@ -944,7 +944,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
             </h3>
           </AccordionTrigger>
           <AccordionContent className="pt-1 pb-1">
-            <ScrollArea className="h-[calc(40vh-90px)] min-h-[200px] pr-1">
+            <div className="overflow-y-auto max-h-[calc(40vh-90px)] pr-1">
               <div className="flex flex-col gap-1 pb-1">
                 {/* DRAG & DROP: Secciones de usuario */}
                 <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -971,10 +971,8 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                     })}
                   </SortableContext>
                 </DndContext>
-                {/* FIN DRAG & DROP */}
-
               </div>
-            </ScrollArea>
+            </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -986,7 +984,7 @@ const StructureAndAddSectionsPanel: React.FC = () => {
             </h3>
           </AccordionTrigger>
           <AccordionContent className="pt-1 pb-1">
-            <ScrollArea className="h-[calc(30vh-90px)] min-h-[140px] pr-1">
+            <div className="overflow-y-auto max-h-[calc(30vh-90px)] pr-1">
               <div className="flex flex-col gap-1 pb-1">
                 {templateSections.length > 0 ? (
                   <>
@@ -1013,10 +1011,10 @@ const StructureAndAddSectionsPanel: React.FC = () => {
                   <p className="text-center text-muted-foreground py-4">No hay secciones sugeridas disponibles</p>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </AccordionContent>
         </AccordionItem>
-        
+
         {/* Añadir Nueva Sección */}
         <AccordionItem value="add-section-panel">
           <AccordionTrigger className="py-1 hover:no-underline">
