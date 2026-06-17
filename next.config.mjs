@@ -50,7 +50,7 @@ const nextConfig = {
               "font-src 'self' data:",
               "object-src 'none'",
               "media-src 'self'",
-              "frame-src 'self'",
+              "frame-src 'self' blob:",
               "worker-src 'self' blob:", // Para Web Workers si los usas
               "child-src 'self' blob:",
               "base-uri 'self'",
