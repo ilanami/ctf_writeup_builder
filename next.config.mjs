@@ -21,7 +21,7 @@ const nextConfig = {
                 "font-src 'self' data:",
                 "object-src 'none'",
                 "media-src 'self'",
-                "frame-src 'self'",
+                "frame-src 'self' blob:",
                 "worker-src 'self' blob:",
                 "child-src 'self' blob:",
                 "base-uri 'self'"
