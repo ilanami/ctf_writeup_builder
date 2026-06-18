@@ -134,7 +134,7 @@
 
   /* Prose (Typst/Markdown content) — theme-aware text colors */
   .prose {
-    --tw-prose-body: hsl(var(--foreground));
+    --tw-prose-body: hsl(0 0% 90%); /* light in hacker theme — headings keep neon green */
     --tw-prose-headings: hsl(var(--foreground));
     --tw-prose-lead: hsl(var(--foreground));
     --tw-prose-links: hsl(var(--primary));
@@ -151,6 +151,20 @@
     --tw-prose-th-borders: hsl(var(--border));
     --tw-prose-td-borders: hsl(var(--border));
   }
+}
+
+/* Prose body text per theme — outside @layer base so it wins over utility classes */
+[data-theme="dark"] .prose,
+[data-theme="light"] .prose {
+  --tw-prose-body: hsl(var(--foreground));
+}
+
+/* Hacker theme: body text near-white, headings stay neon green */
+[data-theme="hacker"] .prose p,
+[data-theme="hacker"] .prose li,
+[data-theme="hacker"] .prose ul,
+[data-theme="hacker"] .prose ol {
+  color: hsl(0 0% 90%);
 }
 
 /* Code blocks — override Typography plugin defaults with theme-aware colors */
