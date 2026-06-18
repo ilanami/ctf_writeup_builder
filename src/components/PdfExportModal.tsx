@@ -85,18 +85,16 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOp
 
     const sections = writeUp.sections.filter(s => !s.isTemplate);
     for (const section of sections) {
-      content.push({
-        text: section.title || tPdfModal('untitledSection'),
-        fontSize: 16, bold: true, color: pdfTheme.primary, headlineLevel: 1, margin: [0, 12, 0, 6],
-      });
+      // Build all content blocks first so we can anchor the title to the first one
+      const sectionBlocks: unknown[] = [];
       if (section.type === 'pregunta' && section.answer) {
-        content.push({
+        sectionBlocks.push({
           text: [{ text: `${tPdfModal('answerLabel')}: `, bold: true }, section.answer],
           fontSize: baseFontSize, margin: [0, 0, 0, 4],
         });
       }
       if (section.type === 'flag' && section.flagValue) {
-        content.push({
+        sectionBlocks.push({
           text: [{ text: `${tPdfModal('flagLabel')}: `, bold: true }, { text: section.flagValue, background: pdfTheme.codeBg, color: pdfTheme.codeColor }],
           fontSize: baseFontSize, margin: [0, 0, 0, 4],
         });
@@ -104,11 +102,30 @@ export const PdfExportModal: React.FC<PdfExportModalProps> = ({ open: externalOp
       if (section.content) {
         let html = section.content.trim();
         if (!html.startsWith('<')) html = DOMPurify.sanitize(marked.parse(html) as string);
-        content.push(...htmlToPdfmake(html, pdfTheme, baseFontSize));
+        sectionBlocks.push(...htmlToPdfmake(html, pdfTheme, baseFontSize));
       }
+
+      // FIX 1.1: title + first content block as unbreakable unit → no orphan titles
+      const titleBlock = {
+        text: section.title || tPdfModal('untitledSection'),
+        fontSize: 16, bold: true, color: pdfTheme.primary, margin: [0, 12, 0, 6],
+      };
+      if (sectionBlocks.length > 0) {
+        content.push({ stack: [titleBlock, sectionBlocks[0]], unbreakable: true });
+        content.push(...sectionBlocks.slice(1));
+      } else {
+        content.push(titleBlock);
+      }
+
+      // FIX 1.2: smaller fit + image+caption as unbreakable unit → less empty space
       for (const shot of section.screenshots ?? []) {
-        content.push({ image: shot.dataUrl, fit: [500, 650], alignment: 'center', margin: [0, 6, 0, 2] });
-        if (shot.name) content.push({ text: shot.name, fontSize: 8, italics: true, color: pdfTheme.accent, margin: [0, 0, 0, 8] });
+        const imageStack: unknown[] = [
+          { image: shot.dataUrl, fit: [500, 420], alignment: 'center', margin: [0, 6, 0, 2] },
+        ];
+        if (shot.name) {
+          imageStack.push({ text: shot.name, fontSize: 8, italics: true, color: pdfTheme.accent, margin: [0, 0, 0, 8] });
+        }
+        content.push({ stack: imageStack, unbreakable: true });
       }
     }
 

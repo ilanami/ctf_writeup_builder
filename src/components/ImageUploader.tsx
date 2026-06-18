@@ -39,6 +39,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const t = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [compressProgress, setCompressProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +49,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
   };
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setError(t('imageUploader.fileTooLarge', { maxSize: MAX_FILE_SIZE_MB }));
       return;
@@ -58,6 +59,25 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       return;
     }
     setError(null);
+
+    let fileToRead = file;
+    try {
+      const imageCompression = (await import('browser-image-compression')).default;
+      setCompressProgress(0);
+      fileToRead = await imageCompression(file, {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+        fileType: 'image/jpeg',
+        initialQuality: 0.8,
+        onProgress: (p) => setCompressProgress(p),
+      });
+    } catch {
+      // Compression failed — fall back to original file
+    } finally {
+      setCompressProgress(null);
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       onImageUpload({
@@ -69,7 +89,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     reader.onerror = () => {
       setError(t('imageUploader.errorReadingFile'));
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToRead);
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -146,6 +166,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           className="hidden"
           ref={fileInputRef}
         />
+        {compressProgress !== null && (
+          <p className="text-xs text-muted-foreground mt-2 animate-pulse">
+            {compressProgress > 0
+              ? t('imageUploader.optimizing', { progress: compressProgress })
+              : t('imageUploader.optimizingFallback')}
+          </p>
+        )}
         {error && <p className="text-sm text-destructive mt-2">{error}</p>}
       </CardContent>
       {!currentImage && (

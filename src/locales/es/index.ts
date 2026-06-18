@@ -276,6 +276,8 @@ export default {
     defaultLabel: "Subir Imagen",
     dragDropOrClick: "Arrastra y suelta o haz clic para seleccionar",
     maxFileSize: "(Max. {maxSize}MB)",
+    optimizing: "Optimizando imagen... {progress}%",
+    optimizingFallback: "Optimizando imagen...",
   },
   tagInput: {
     addButton: "Añadir",
